@@ -48,7 +48,7 @@ class PatchExtractor:
         if xml_path != '':
             self.annotation_classifier = AnnotationHandler.AnnotationHandler(xml_path)
 
-        self.x, self.y = 0, 0  # 13371, 147906  # TODO
+        self.x, self.y = 13371, 147906  # TODO
         self.tensor_size = size
         self.x_step = size[0] - overlap
         self.y_step = size[1] - overlap
@@ -71,6 +71,7 @@ class PatchExtractor:
                     if self.y_end < self.y + self.y_step:  # done iterating
                         self.x, self.y = 0, 0
                         self.logger.info(f"Finished slide, returning {in_tensor_count} valid results")
+                        self.Done = True
                         break
                     else:  # start next line
                         self.x = 0
@@ -89,6 +90,7 @@ class PatchExtractor:
                                                                                           y3=self.y + self.y_step,
                                                                                           x4=self.x, y4=self.y + self.y_step)
                     if (self.extract_type == ExtractType.tumor_only and sample_has_tumor) or self.extract_type == ExtractType.normal_only:  # in case only looking for tumors in WSI
+                        self.logger.debug(f"adding x,y = ({self.x},{self.y}) huristic value= {self.huristic(tmp_tensor)} sample num={in_tensor_count}")
                         tmp_tensor = torch.unsqueeze(tmp_tensor, 0)
                         result_tensor[in_tensor_count] = torch.clone(tmp_tensor)
                         in_tensor_count += 1
@@ -121,6 +123,10 @@ class PatchExtractor:
 
 
     def huristic(self, tmp_tensor):
-        red_channel = tmp_tensor[0]
-        # print(torch.mean(red_channel))
-        return torch.mean(red_channel)
+        #red_channel = tmp_tensor[0]
+        #print(torch.mean(red_channel))
+        #return torch.mean(red_channel)
+        av = torch.mean(transforms.functional.rgb_to_grayscale(tmp_tensor))
+        # print(av)  # TODO
+        return av
+        

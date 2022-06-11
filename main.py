@@ -214,7 +214,7 @@ if __name__ == '__main__':
 
 
     extractor = PatchExtractor(wsi_path=file_path, xml_path= xml_file_path, patches_in_batch= 64,
-                   size = (512, 512), extract_type=ExtractType.normal_only, overlap= 0, wsi_level= 0).extract_path_batches_to_tensors(output_path_dir=out_dir_path)
+                   size = (512, 512), extract_type=ExtractType.normal_only, overlap= 0, wsi_level= 0)
     extractor.extract_path_batches_to_tensors(out_dir_path)
     extractor.extract_type = ExtractType.tumor_only
     extractor.resetITR()
