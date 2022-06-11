@@ -62,7 +62,7 @@ class PatchExtractor:
             transform = transforms.Compose([transforms.ToTensor()])
 
             result_tensor = torch.zeros(size=(self.patches_in_batch, 3, *self.tensor_size))
-            self.logger.debug(f"tensor shape {result_tensor.shape}")
+            # self.logger.debug(f"tensor shape {result_tensor.shape}")
 
             in_tensor_count = 0
             while in_tensor_count < self.patches_in_batch:
@@ -96,6 +96,7 @@ class PatchExtractor:
                 self.x += self.x_step
             if in_tensor_count != self.patches_in_batch:
                 self.Done = True
+            self.logger.debug(f"before yielding, x={self.x}, y= {self.y}")
             yield result_tensor, in_tensor_count  # tensor, number_of_valid_recs
 
     def resetITR(self):
