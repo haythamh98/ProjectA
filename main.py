@@ -27,7 +27,7 @@ import xml.dom.minidom
 from xml.dom import minidom
 
 from WSI_Tools.AnnotationHandler import AnnotationHandler
-from WSI_Tools.PatchExtractor import PatchExtractor
+from WSI_Tools.PatchExtractor import PatchExtractor,ExtractType
 
 
 from sklearn.manifold import TSNE
@@ -211,10 +211,14 @@ if __name__ == '__main__':
     file_path = os.path.join('/', 'databases', 'hawahaitam', 'tumor_009.tif')
     xml_file_path = os.path.join('/', 'databases', 'hawahaitam', 'tumor_009.xml')
     out_dir_path = os.path.join('/', 'data', 'hawahaitam', 'temp_11_6')
-    PatchExtractor(wsi_path=file_path, xml_path= xml_file_path, patches_in_batch= 64,
-                   size = (512, 512), tumor = False, overlap= 0, wsi_level= 0).extract_path_batches_to_tensors(output_path_dir=out_dir_path)
-    PatchExtractor(wsi_path=file_path, xml_path=xml_file_path, patches_in_batch=64,
-                   size=(512, 512), tumor=True, overlap=0, wsi_level=0).extract_path_batches_to_tensors(output_path_dir=out_dir_path)
+
+
+    extractor = PatchExtractor(wsi_path=file_path, xml_path= xml_file_path, patches_in_batch= 64,
+                   size = (512, 512), extract_type=ExtractType.normal_only, overlap= 0, wsi_level= 0).extract_path_batches_to_tensors(output_path_dir=out_dir_path)
+    extractor.extract_path_batches_to_tensors(out_dir_path)
+    extractor.extract_type = ExtractType.tumor_only
+    extractor.extract_path_batches_to_tensors(out_dir_path)
+
 
     exit()
     file_path = os.path.join('/', 'databases', 'hawahaitam', 'tumor_009.tif')

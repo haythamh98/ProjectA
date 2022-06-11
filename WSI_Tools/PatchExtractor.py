@@ -1,5 +1,7 @@
 import logging
 import os.path, sys
+from enum import Enum
+
 import openslide
 import torch
 import logging
@@ -10,13 +12,17 @@ from torchvision import datasets, transforms, models
 
 """
     BIG TODOS:
-        1) check if its better to use same pass to extract both types, and return two tensor tuple
-        2) change self.tumor to "self.extract_tumers_only"
+        1) different itr classes
+        2) 
         3) 
 """
+class ExtractType(Enum):
+    tumor_only=0
+    normal_only=1
+
 class PatchExtractor:
-    def __init__(self, wsi_path: str, xml_path: str = '', size: tuple = (512,512), patches_in_batch: int = 64, tumor: bool = False, overlap: int = 0,
-                 wsi_level: int = 0, logger=None):
+    def __init__(self, wsi_path: str, xml_path: str = '', size: tuple = (512,512), patches_in_batch: int = 64,  overlap: int = 0,
+                 wsi_level: int = 0,extract_type: ExtractType = ExtractType.normal_only, logger=None):
         if logger is not None:
             raise NotImplementedError
         logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -25,7 +31,6 @@ class PatchExtractor:
 
         if wsi_level != 0:
             raise NotImplementedError
-
 
         self.wsi_path = wsi_path
         self.WSI_ID = int(os.path.split(wsi_path)[1][-7:-4])
@@ -36,7 +41,8 @@ class PatchExtractor:
         self.wsi = openslide.open_slide(wsi_path)
 
         self.patches_in_batch = patches_in_batch
-        self.tumor = tumor
+
+        self.extract_type = extract_type
 
         self.xml_path = xml_path
         if xml_path != '':
@@ -51,6 +57,7 @@ class PatchExtractor:
         self.Done = False
 
     def __iter__(self) -> Iterator[Tensor]:
+        assert self.extract_type == ExtractType.normal_only or (self.extract_type != ExtractType.normal_only and self.xml_path != '')
         while not self.Done:
             transform = transforms.Compose([transforms.ToTensor()])
 
@@ -75,13 +82,13 @@ class PatchExtractor:
                 # self.logger.debug(f"tensor to fil shape {tmp_tensor.shape}")
                 if self.huristic(tmp_tensor) >= 0.7:  # TODO move to config.py
                     sample_has_tumor = False
-                    if self.tumor:
+                    if self.extract_type == ExtractType.tumor_only:
                         sample_has_tumor = self.annotation_classifier.rectangle_has_tumor(x1=self.x, y1=self.y,
                                                                                           x2=self.x + self.x_step, y2=self.y,
                                                                                           x3=self.x + self.x_step,
                                                                                           y3=self.y + self.y_step,
                                                                                           x4=self.x, y4=self.y + self.y_step)
-                    if self.tumor == sample_has_tumor:  # in case only looking for tumors in WSI
+                    if (self.extract_type == ExtractType.tumor_only and sample_has_tumor) or self.extract_type == ExtractType.normal_only:  # in case only looking for tumors in WSI
                         tmp_tensor = torch.unsqueeze(tmp_tensor, 0)
                         result_tensor[in_tensor_count] = torch.clone(tmp_tensor)
                         in_tensor_count += 1
@@ -98,11 +105,10 @@ class PatchExtractor:
         >>> torch.load('tensor.pt')
         tensor([1., 2.])
         '''
-        assert (self.xml_path != '') or (not self.tumor)
         for i, (batch, samples_count) in enumerate(self):
-            type_name = 'with_tumor' if self.tumor else 'without_tumor'
+            type_name = 'with_tumor' if self.extract_type == ExtractType.tumor_only else 'without_tumor'
             out_tensor_path = os.path.join(output_path_dir,
-                                           f'{extractor.WSI_type}_{extractor.WSI_ID}_{type_name}_{i}.pt')
+                                           f'{self.WSI_type}_{self.WSI_ID}_{type_name}_{i}.pt')
             if samples_count != 64:
                 batch = batch[:samples_count]
             torch.save(batch, out_tensor_path)
