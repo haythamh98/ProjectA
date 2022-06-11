@@ -25,7 +25,7 @@ class PatchExtractor:
                  wsi_level: int = 0,extract_type: ExtractType = ExtractType.normal_only, logger=None):
         if logger is not None:
             raise NotImplementedError
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
         self.logger = logging.getLogger(name="PatchExtractor")
 
 
@@ -97,6 +97,10 @@ class PatchExtractor:
             if in_tensor_count != self.patches_in_batch:
                 self.Done = True
             yield result_tensor, in_tensor_count  # tensor, number_of_valid_recs
+
+    def resetITR(self):
+        self.x = 0
+        self.y = 0
 
     def extract_path_batches_to_tensors(self, output_path_dir):
         '''

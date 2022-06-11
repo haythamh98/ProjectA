@@ -217,6 +217,7 @@ if __name__ == '__main__':
                    size = (512, 512), extract_type=ExtractType.normal_only, overlap= 0, wsi_level= 0).extract_path_batches_to_tensors(output_path_dir=out_dir_path)
     extractor.extract_path_batches_to_tensors(out_dir_path)
     extractor.extract_type = ExtractType.tumor_only
+    extractor.resetITR()
     extractor.extract_path_batches_to_tensors(out_dir_path)
 
 
