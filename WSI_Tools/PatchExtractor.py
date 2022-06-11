@@ -123,4 +123,4 @@ class PatchExtractor:
     def huristic(self, tmp_tensor):
         red_channel = tmp_tensor[0]
         # print(torch.mean(red_channel))
-        return torch.mean(red_channel)
+        return torch.median(red_channel)
