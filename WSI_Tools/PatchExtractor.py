@@ -114,7 +114,7 @@ class PatchExtractor:
             type_name = 'with_tumor' if self.extract_type == ExtractType.tumor_only else 'without_tumor'
             out_tensor_path = os.path.join(output_path_dir,
                                            f'{self.WSI_type}_{self.WSI_ID}_{type_name}_{i}.pt')
-            if samples_count != 64:
+            if samples_count != self.patches_in_batch:
                 batch = batch[:samples_count]
             torch.save(batch, out_tensor_path)
             print(f"file {out_tensor_path} was done with {samples_count}")
@@ -123,4 +123,4 @@ class PatchExtractor:
     def huristic(self, tmp_tensor):
         red_channel = tmp_tensor[0]
         # print(torch.mean(red_channel))
-        return torch.median(red_channel)
+        return torch.mean(red_channel)
