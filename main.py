@@ -3,7 +3,7 @@ from ctypes import cdll
 from os import path
 
 import PIL
-import cv2
+#import cv2
 import torchvision
 from PIL import Image
 import numpy as np
@@ -14,8 +14,23 @@ import torch
 from torch import Tensor
 from torchvision import datasets, transforms, models
 
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
 
-# from sklearn.manifold import TSNE
+from ctypes.util import find_library
+
+import openslide
+# from CLAM.wsi_core.WholeSlideImage import WholeSlideImage
+
+
+import xml.dom.minidom
+from xml.dom import minidom
+
+from WSI_Tools.AnnotationHandler import AnnotationHandler
+from WSI_Tools.PatchExtractor import PatchExtractor
+
+
+from sklearn.manifold import TSNE
 # from sklearn.manifold import MDS
 
 
@@ -23,15 +38,7 @@ def big_file_Walkaround():
     PIL.Image.MAX_IMAGE_PIXELS = 933120000  # 21630025728 * 10
 
 
-def show_image_by_path(image_path):
-    img = mpimg.imread(image_path)
-    imgplot = plt.imshow(img)
-    plt.show()
 
-
-def show_image_RGBA(image):
-    imgplot = plt.imshow(image)
-    plt.show()
 
 
 def extract_tiles_in_rectangle(wsi, level: int, tile_size: tuple, outsize: tuple, start_rec: tuple, end_rec: tuple,
@@ -59,31 +66,6 @@ def extract_tiles_in_rectangle(wsi, level: int, tile_size: tuple, outsize: tuple
     return pic_index
 
 
-def show_grayscale_image(img, title='Gray', show_histogram=False, histogram_bins=30, x_axis_name=None,
-                         y_axis_name=None):
-    fig = plt.figure(figsize=(8, 5))
-    ax = fig.add_subplot(1, 1, 1)  # create a subplot of certain size
-    ax.imshow(img, cmap="gray")
-
-    ax.set_title(f"{title}")
-    if x_axis_name is not None:
-        plt.xlabel(x_axis_name)
-    if y_axis_name is not None:
-        plt.ylabel(y_axis_name)
-    if y_axis_name is None and x_axis_name is None:
-        ax.set_axis_off()
-    plt.show()
-    if show_histogram:
-        fig = plt.figure(figsize=(8, 5))  # create a figure
-        ax = fig.add_subplot(1, 1, 1)  # create a subplot of certain size
-        ax.hist(img.flatten(), histogram_bins)
-        if y_axis_name is not None:
-            ax.ylabel(y_axis_name)
-        ax.xlabel("Bin number")
-        ax.set_title(f"{title} GrayScale Histogram")
-        ax.grid()
-        plt.show()
-
 
 def extract_samples():
     file_path = os.path.join('/', 'home', 'administrator', 'temp', 'tumor_009.tif')
@@ -105,6 +87,8 @@ def extract_samples():
     tile_decrease_ratio = 1
     extract_tiles_in_rectangle(wsi, level=1, tile_size=(512, 512), outsize=(512, 512), start_rec=(0, 0),
                                end_rec=(600, 600), out_path=out_file_path_temp, out_name="hi")
+
+
 
 
 def extract_features():
@@ -133,6 +117,7 @@ def extract_features():
         image = Image.open(os.path.join(file_dir1, img))  # .convert('RGB')
         input_tensor = preprocess(image)
         input_batch = input_tensor.unsqueeze(0)
+        # print(input_batch.shape)
         with torch.no_grad():
             output = torch.squeeze(my_model(input_batch)).unsqueeze(0)
             outputs[ssize + i] = output.clone()
@@ -149,28 +134,100 @@ def extract_features():
         plt.show()
 
 
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
+def extract_forward_tensors(wsi_file_path,xml_file_path,output_path_dir,tumor:bool):
+    '''
+    >>> t = torch.tensor([1., 2.])
+    >>> torch.save(t, 'tensor.pt')
+    >>> torch.load('tensor.pt')
+    tensor([1., 2.])
+    '''
+    resnet50 = models.resnet50(pretrained=True)
+    resnet50.eval()
+    my_model = torch.nn.Sequential(*(list(resnet50.children())[:-1]))  # strips off last linear layer
 
-from ctypes.util import find_library
+    extractor = PatchExtractor(wsi_path=wsi_file_path, xml_path= xml_file_path, patches_in_batch= 64, size = (512, 512), tumor = tumor, overlap= 0, wsi_level= 0)
+    for i,(batch,samples_count) in enumerate(extractor):
+        transform = transforms.ToPILImage()
 
-import openslide
-# from CLAM.wsi_core.WholeSlideImage import WholeSlideImage
+        # img = transform(batch[0]).convert("RGB")
+        # img.show()
+        with torch.no_grad():
+            forward = my_model(batch)
+            type_name = 'with_tumor' if tumor else 'without_tumor'
+            out_tensor_path = os.path.join(output_path_dir,f'{extractor.WSI_type}_{extractor.WSI_ID}_{type_name}_{i}.pt')
+            if samples_count != 64:
+                forward = forward[:samples_count]
+            torch.save(forward,out_tensor_path)
+            print(f"file {out_tensor_path} was done with {samples_count}")
 
 
-import xml.dom.minidom
-from xml.dom import minidom
 
-from WSI_Tools.AnnotationHandler import AnnotationHandler
-from WSI_Tools.PatchExtractor import PatchExtractor
+
+
+def apply_TSNE(tensor_dir):
+
+    with_tumor = torch.randn(0)  # torch.zeros(size=(64,2048))
+    wo_tumor = torch.randn(0)  # torch.zeros(size=(64,2048))
+    for tensor_file_name in os.listdir(tensor_dir):
+        loaded_tensor = torch.load(os.path.join(tensor_dir,tensor_file_name))
+        loaded_tensor = torch.squeeze(loaded_tensor)
+        data_has_tumor = ('with_tumor' in tensor_file_name)
+        print(f"loading file {tensor_file_name} laoded shape {loaded_tensor.shape}")
+        if data_has_tumor:
+            if with_tumor is None:
+                with_tumor = torch.clone(loaded_tensor)
+            else:
+                with_tumor = torch.cat((with_tumor,loaded_tensor),0)
+        else:
+            if wo_tumor is None:
+                wo_tumor = torch.clone(loaded_tensor)
+            else:
+                wo_tumor = torch.cat((wo_tumor, loaded_tensor),0)
+    total_tensor = None
+    if wo_tumor is None:
+        total_tensor = with_tumor
+    elif with_tumor is None:
+        total_tensor = wo_tumor
+    else:
+        total_tensor = torch.cat((wo_tumor,with_tumor),0)
+    X_embedded = TSNE(n_components=2, learning_rate='auto', init='random').fit_transform(total_tensor)
+    tumor_count = with_tumor.shape[0]
+    no_tumor_count = wo_tumor.shape[0]
+    if no_tumor_count > 0:
+        plt.scatter(X_embedded[:no_tumor_count, 0], X_embedded[:no_tumor_count, 1], color='#88c999')
+    if tumor_count > 0:
+        plt.scatter(X_embedded[no_tumor_count:, 0], X_embedded[no_tumor_count:, 1], color='hotpink')
+    plt.legend(["Normal", "Tumor"])
+    plt.show()
+
+
+
+
+
 if __name__ == '__main__':
     print("Hi")
     # big_file_Walkaround()
     # os.add_dll_directory(r"C:\Users\haytham\Downloads\openslide-win64-20171122\openslide-win64-20171122\bin") # for windows only
-
     file_path = os.path.join('/', 'databases', 'hawahaitam', 'tumor_009.tif')
     xml_file_path = os.path.join('/', 'databases', 'hawahaitam', 'tumor_009.xml')
+    out_dir_path = os.path.join('/', 'data', 'hawahaitam', 'temp_11_6')
+    PatchExtractor(wsi_path=file_path, xml_path= xml_file_path, patches_in_batch= 64,
+                   size = (512, 512), tumor = False, overlap= 0, wsi_level= 0).extract_path_batches_to_tensors(output_path_dir=out_dir_path)
+    PatchExtractor(wsi_path=file_path, xml_path=xml_file_path, patches_in_batch=64,
+                   size=(512, 512), tumor=True, overlap=0, wsi_level=0).extract_path_batches_to_tensors(output_path_dir=out_dir_path)
 
+    exit()
+    file_path = os.path.join('/', 'databases', 'hawahaitam', 'tumor_009.tif')
+    xml_file_path = os.path.join('/', 'databases', 'hawahaitam', 'tumor_009.xml')
+    out_dir_path = os.path.join('/', 'data', 'hawahaitam', 'temp_9_6')
+    extract_forward_tensors(file_path,xml_file_path,out_dir_path,tumor=True)
+    print("extract_forward_tensors(file_path,xml_file_path,out_dir_path,tumor=True) ----------- DONE")
+    extract_forward_tensors(file_path,xml_file_path,out_dir_path,tumor=False)
+    print("extract_forward_tensors(file_path,xml_file_path,out_dir_path,tumor=False) ----------- DONE")
+    apply_TSNE(out_dir_path)
+
+
+    exit()
     pe = PatchExtractor(wsi_path=file_path,xml_path=xml_file_path,size=(512,512),patches_in_batch=6,tumor=True,overlap=0,wsi_level=0)
     for result,extracted_succ in pe:
         transform = transforms.ToPILImage()
@@ -183,38 +240,6 @@ if __name__ == '__main__':
 
     anota = AnnotationHandler(xml_file_path)
 
-    print(anota.point_has_tumor(Point(79279, 86168)))  # No
-    print(anota.point_has_tumor(Point(81259, 79569)))  # yes
-    print(anota.point_has_tumor(Point(61753, 130065)))  # yes
-
-
-
-    dom1 = minidom.parse(xml_file_path)
-
-    print(dom1)
-    print(dom1.nodeName)
-    print(dom1.firstChild.tagName)
-
-    # check if file format as expected
-    annotations = dom1.getElementsByTagName("Annotations")
-    assert annotations is not None
-    for annotation_doc in annotations:
-        annotation = annotation_doc.getElementsByTagName("Annotation")
-        print(annotation_doc)
-        print(annotations)
-        print(annotation)
-        assert annotation is not None
-        coordinates = annotation.getElementsByTagName("Coordinates")
-        assert coordinates is not None
-        cur
-        for point in coordinates.getElementsByTagName("Coordinate"):
-            x = point.getAttribute("X")
-            y = point.getAttribute("Y")
-            Point
-
-    point = Point(0.5, 0.5)
-    polygon = Polygon([(0, 0), (0, 1), (1, 1), (1, 0)])
-    print(polygon.contains(point))
 
     exit()
     wsi = openslide.open_slide(file_path)
