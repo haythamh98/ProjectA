@@ -1,81 +1,167 @@
+from enum import Enum
+
 import matplotlib
 
 matplotlib.use('GTK3Agg')
 import matplotlib.pyplot as plt
 
-import logging
 import os.path, sys
-from enum import Enum
 import cv2
 import openslide
-import torch
 import logging
 
 # from matplotlib import pyplot as plt
-from typing import Iterator
-from . import AnnotationHandler
-from torch import Tensor
-from torchvision import datasets, transforms, models
-from PIL import Image, ImageOps
+from WSI_Tools.PatchExtractor_Tools.AnnotationHandler import XMLAnnotationHandler
+from PIL import ImageOps
 import numpy as np
-from .PatchExtractor_config import *
-from xml.dom import minidom
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-from shapely.affinity import scale
-
-"""
-    BIG TODOS:
-        1) different itr classes
-        2) 
-        3) 
-"""
+from PatchExtractor_config import *
+from abc import ABC
 
 
-class ExtractType(Enum):
-    tumor_only = 0
-    normal_only = 1
+# BIG TODO:
+#   1) merge micro&macro together?
 
+class PatchTag(Enum):
+    NONE = -1
+    NEGATIVE = 0
+    MACRO = 1
+    MICRO = 2
+    ITC = 3
 
 class PatchExtractor:
-    def __init__(self, wsi_path: str, xml_path: str = '', size: tuple = (512, 512), patches_in_batch: int = 64,
-                 overlap: int = 0,
-                 wsi_level: int = 0, extract_type: ExtractType = ExtractType.normal_only, logger=None):
-        if logger is not None:
-            raise NotImplementedError
-        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-        self.logger = logging.getLogger(name="PatchExtractor")
+    def __init__(self,
+                 wsi_path: str = wsi_dir_path,
+                 xml_dir_path: str = annotation_xml_dir_path,
+                 tag_csv_file_path : str = tag_csv_file_path,
+                 patch_size: tuple = DEFAULT_PATCH_SIZE,
+                 patch_overlap: tuple = DEFAULT_PATCH_OVERLAP,
+                 negative_output_dir : str = NEGATIVE_OUTPUT_DIR,
+                 macro_output_dir : str = MACRO_OUTPUT_DIR,
+                 micro_output_dir : str =MICRO_OUTPUT_DIR ,
+                 itc_output_dir : str =ITC_OUTPUT_DIR ,
+                 wsi_level: int = DEFAULT_EXTRACTION_LEVEL,
+                 down_scaled_image_annotated_boundaries_output_dir_path: str = DOWN_SCALLED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH,
+                 logger= PATCH_EXTRACTORS_DEFAULT_LOGGER
+                 ):
+
+
+        if not DISABLE_LOGGER:
+            if logger is not None:
+                self.logger = logger
+            else:
+                logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+                self.logger = logging.getLogger(name="PatchExtractor_Tools")
+
+        self.tag_csv_file_path = tag_csv_file_path
+        self.xml_dir_path = xml_dir_path
+        self.analyze_wsi_path(wsi_path)
+        self.read_tag()
 
         if wsi_level != 0:
             raise NotImplementedError
-
-        self.wsi_path = wsi_path
-        self.WSI_ID = int(os.path.split(wsi_path)[1][-7:-4])
-        full_file_name = os.path.split(wsi_path)[1]
-        self.WSI_type = full_file_name[0:full_file_name.index('_')]
-        self.logger.debug(f"image name {full_file_name} type={self.WSI_type} ID={self.WSI_ID}")
         self.wsi_level_to_extract = wsi_level
-        self.wsi = openslide.open_slide(wsi_path)
 
-        self.patches_in_batch = patches_in_batch
+        expected_xml_path = self.generate_expected_xml_path()
+        self.tumor_classifier = XMLAnnotationHandler(expected_xml_path)  # return enum
 
-        self.extract_type = extract_type
+        self.contours = self.generate_contours_around_wsi(down_scaled_image_annotated_boundaries_output_dir_path)
 
-        self.xml_path = xml_path
-        if xml_path != '':
-            self.annotation_classifier = AnnotationHandler.AnnotationHandler(xml_path)
+        self.itc_output_dir = itc_output_dir
+        self.micro_output_dir = micro_output_dir
+        self.macro_output_dir = macro_output_dir
+        self.negative_output_dir = negative_output_dir
+        self.patch_overlap = patch_overlap
+        self.patch_size = patch_size
 
-        self.x, self.y = 0, 0  # 29975, 84826  # TODO 0,204194#
-        self.tensor_size = size
-        self.x_step = size[0] - overlap
-        self.y_step = size[1] - overlap
-        self.x_end, self.y_end = self.wsi.level_dimensions[wsi_level][0], self.wsi.level_dimensions[wsi_level][1]
+        self.wsi = openslide.open_slide(self.wsi_path)
 
-        self.contours = []
-        self.init_wsi_contours(True)
 
-        self.Done = False
+    def analyze_wsi_path(self, wsi_path):
+        self.wsi_path = wsi_path
+        self.wsi_name = os.path.split(wsi_path)[1]
+        print("self.wsi_name = os.path.split(wsi_path)[1][:-4]",self.wsi_name)
+        self.patient_ID = int(self.wsi_name.split('_')[1])
+        self.patient_node_ID = int(self.wsi_name.split('_')[3][0])
+        self.wsi_Center_ID = -1
+        if 'Center' in wsi_path: # TODO: check Center or center
+            self.wsi_Center_ID = wsi_path[wsi_path.find('Center')+7:wsi_path.find('Center')+8]
+            print('self.wsi_Center_ID',self.wsi_Center_ID)
 
+    def read_tag(self):
+        with open(self.tag_csv_file_path) as csv_file:
+            lines = csv_file.readlines()
+            for line in lines:
+                if line.startswith(self.wsi_name):
+                    line = line.split(',')
+                    self.wsi_tag = line[-1]
+                    print(' self.wsi_tag ', self.wsi_tag)
+                    return
+        raise Exception(f"TAG NOT FOUND for {self.wsi_name}")
+
+    def generate_expected_xml_path(self):
+        return os.path.join(self.xml_dir_path,self.wsi_name[:-3] + 'xml')
+
+    def generate_contours_around_wsi(self, down_scaled_image_annotated_boundries_output_dir_path):
+        xxx, yyy = self.wsi.level_dimensions[0][0] / DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE, \
+                   self.wsi.level_dimensions[0][1] / DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE
+        im = self.wsi.get_thumbnail(size=(xxx, yyy))
+        img_gray = ImageOps.grayscale(im)
+        blur = cv2.GaussianBlur(np.array(img_gray), IMG_CONTOUR_BLUR_KERNEL_SIZE, 0)
+        # apply binary thresholding
+        ret, thresh = cv2.threshold(blur, CV2_THRESH_FOR_EDGES, 255, cv2.THRESH_OTSU)
+        # detect the contours on the binary image using cv2.CHAIN_APPROX_NONE
+        contours, hierarchy = cv2.findContours(image=thresh, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
+        # draw contours on the original image
+        image_copy = np.array(im.copy())
+        valid_contours = []
+        # filter contours
+        for cont in contours:
+            if (xxx + yyy) * 0.9 > len(cont) > IMG_CONTOUR_MIN_NUM_POINTS:
+                # TODO: filter vertical noise lines from wsi
+                valid_contours += [cont]
+
+        x_scale_ratio = self.wsi.level_dimensions[0][0] / xxx
+        y_scale_ratio = self.wsi.level_dimensions[0][1] / yyy
+
+        for contour in valid_contours:
+            cur_polygon = []
+            for point in contour:
+                x = (float(point[0][0]) * x_scale_ratio)
+                y = (float(point[0][1]) * y_scale_ratio)
+                cur_polygon.append(Point(x, y))
+
+            polly = Polygon(cur_polygon)
+            # polly = scale(polly, yfact=-1, origin=(1, 0))
+            self.contours.append(polly)  # (36864,87898)
+            x, y = polly.exterior.xy
+            plt.plot(np.array(x), np.array(y))
+            ax = plt.gca()
+
+
+        cv2.drawContours(image=image_copy, contours=valid_contours, contourIdx=-1, color=(0, 255, 0), thickness=1,
+                         lineType=cv2.LINE_AA)
+        cv2.imwrite(os.path.join(down_scaled_image_annotated_boundries_output_dir_path, self.wsi_name + '.jpg'), image_copy)
+
+        return valid_contours
+
+    # TODO: for now: all patches in node with ITC are considered itc
+    # tag = micro/macro is ignored, and we calculate the max width of the metastasis
+    def classify_metastasis_polygon(self,polygon : Polygon):
+        for contour in self.contours:
+            if polygon.intersects(contour):
+                if self.wsi_tag == 'itc':
+                    return PatchTag.ITC
+                return self.tumor_classifier.get_polygon_metastasis(polygon)
+        return PatchTag.NONE
+
+    def start_extract(self):
+        pass
+
+
+
+"""
     def __iter__(self) -> Iterator[Tensor]:
         assert self.extract_type == ExtractType.normal_only or (
                 self.extract_type != ExtractType.normal_only and self.xml_path != '')
@@ -134,7 +220,6 @@ class PatchExtractor:
                 self.Done = True
             self.logger.debug(f"before yielding, x={self.x}, y= {self.y}")
             yield result_tensor, in_tensor_count  # tensor, number_of_valid_recs
-
     def resetITR(self):
         self.Done = False
         self.x = 0
@@ -219,3 +304,4 @@ class PatchExtractor:
             full_wsi_name = os.path.split(self.wsi_path)[1][:-4]
             print(full_wsi_name)
             cv2.imwrite(os.path.join(os.path.split(self.wsi_path)[0],full_wsi_name + '.jpg'), image_copy)
+"""
