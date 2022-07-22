@@ -261,11 +261,12 @@ def extract_batches(wsi_path, out_dir):
     '''
 
 
-def dir_to_forward_tensor(dir_path, nSamples):
+def dir_to_forward_tensor(dir_path, nSamples,forwarded_path=''):
     res_list = tensor_file_resnet50_forward(dir_path, num_samples=nSamples)
     res_tensor = torch.cat(res_list, dim=0)
-    torch.save(res_tensor,
-               os.path.join('/', 'databases', 'hawahaitam', os.path.split(dir_path)[1] + '_forwarded_tensor.pt'))
+    if forwarded_path == '':
+        forwarded_path = os.path.join('/', 'databases', 'hawahaitam', os.path.split(dir_path)[1] + '_forwarded_tensor.pt')
+    torch.save(res_tensor,forwarded_path)
 
 
 def from_forward_dir_to_tsne_tensor(forward_dir, output_path):
@@ -354,6 +355,38 @@ def from_tnse_tensor_to_knn_module(knn_input_tensor_path, knn_labels_tensor_path
     accu = 1 - torch.count_nonzero(miss_classifications) / len(y_test)
     print(f"Accuracy {accu} ")
     return knn
+
+
+def handle_wsi(wsi_path,extracted_output_dir,extracted_forward='',nbatches=64):
+    # WSI --> batch with 64 tensors (two dirs, one for tumor tensors, one for normal)
+    file_path = wsi_path
+    file_dir = os.path.split(wsi_path)[0]
+    file_name = os.path.split(wsi_path)[1]
+    xml_file_path = ''
+    tumor_out_dir_path = ''
+    if os.path.isfile(os.path.join(file_dir,file_name[:-4] + '.xml')):
+        xml_file_path = os.path.join(file_dir,file_name[:-4] + '.xml')
+
+    extractor = PatchExtractor(wsi_path=file_path, xml_path=xml_file_path, patches_in_batch=nbatches,
+                               size=(512, 512), extract_type=ExtractType.normal_only, overlap=0, wsi_level=0)
+    normal_out_dir_path = os.path.join(extracted_output_dir, f'{file_name[:-4]}_normal')
+    print(f"start extracting {file_name} normal")
+    extractor.extract_path_batches_to_tensors(normal_out_dir_path)
+    if xml_file_path != '':
+        extractor.resetITR()
+        extractor.extract_type = ExtractType.tumor_only
+        tumor_out_dir_path = os.path.join(extracted_output_dir, f'{file_name[:-4]}_tumor')
+        print(f"start extracting {file_name} tumor")
+        extractor.extract_path_batches_to_tensors(tumor_out_dir_path)
+
+    # tumor_out_dir_path , normal_out_dir_path --> resnet50 forward tensors + augmentation
+    print(f"start extracting forward tensors for {file_name}")
+    nsamples = 64*1000
+    dir_to_forward_tensor(normal_out_dir_path,nsamples,extracted_forward)
+    if tumor_out_dir_path != '':
+        dir_to_forward_tensor(tumor_out_dir_path,nsamples,extracted_forward)
+
+
 
 
 if __name__ == '__main__':
