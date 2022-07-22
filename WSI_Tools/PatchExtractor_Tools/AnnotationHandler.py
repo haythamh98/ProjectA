@@ -1,7 +1,9 @@
+import os.path
+
 from xml.dom import minidom
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
-from PatchExtractor import PatchTag as MetastasisType
+from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config  import PatchTag as MetastasisType
 from enum import Enum
 
 MICRO_THRESHHOLD = 1 # TODO: put real num, as fucntion of wsi.level?
@@ -19,7 +21,11 @@ class XMLAnnotationHandler:
     def __init__(self, xml_file_path: str):
         self.xml_file_path = xml_file_path
         self.polygons = []
-        self._parse_xml_file()
+        self.polygons_metastasis_tag = []
+        if os.path.isfile(xml_file_path):
+            self._parse_xml_file()
+        else:
+            pass  # negative/itc only mode
 
     def _parse_xml_file(self):
         document = minidom.parse(self.xml_file_path)
@@ -36,6 +42,17 @@ class XMLAnnotationHandler:
                     cur_polygon.append(Point(x, y))
             self.polygons.append(Polygon(cur_polygon))
 
+        for poly in self.polygons:
+            box = poly.minimum_rotated_rectangle  # TODO: this is naive way and not right
+            x, y = box.exterior.coords.xy
+            axis = (Point(x[0], y[0]).distance(Point(x[1], y[1])), Point(x[1], y[1]).distance(Point(x[2], y[2])))
+            major_axis = max(axis)
+            if major_axis >= MICRO_THRESHHOLD:
+                self.polygons_metastasis_tag.append(MetastasisType.MICRO)
+            else:
+                self.polygons_metastasis_tag.append(MetastasisType.MACRO)
+
+
     def has_metastasis(self, x: float, y: float):
         return self.point_has_metastasis(Point(x, y))
 
@@ -46,16 +63,9 @@ class XMLAnnotationHandler:
         return False
 
     def get_polygon_metastasis(self, polygon: Polygon):
-        for self_polygon in self.polygons:
+        for self_polygon_type,self_polygon in zip(self.polygons_metastasis_tag,self.polygons):
             if self_polygon.intersects(polygon):
-                box = polygon.minimum_rotated_rectangle  # TODO: this is naive way and not right
-                x, y = box.exterior.coords.xy
-                axis = (Point(x[0], y[0]).distance(Point(x[1], y[1])), Point(x[1], y[1]).distance(Point(x[2], y[2])))
-                major_axis = max(axis)
-                if major_axis >= MICRO_THRESHHOLD:
-                    return MetastasisType.MICRO
-                else:
-                    return MetastasisType.MACRO
+                return self_polygon_type
         return MetastasisType.NEGATIVE
 
     def get_rectangle_metastasis(self, x1 : float, y1: float, x2: float, y2: float,
@@ -64,8 +74,4 @@ class XMLAnnotationHandler:
 
     def visualize(self):
         raise NotImplementedError  # TODO
-        # m = self.polygons[0].exterior.xy
-        # print(m)
-        # x, y = self.polygons[0].exterior.xy
-        # plt.plot(range(1, 10), range(1, 10))
-        # plt.show()
+

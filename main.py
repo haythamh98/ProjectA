@@ -31,4 +31,7 @@ if __name__ == '__main__':
     # big_file_Walkaround()
     # for windows only
     # os.add_dll_directory(r"C:\Users\haytham\Downloads\openslide-win64-20171122\openslide-win64-20171122\bin")
+    wsi_path = r'/home/hawahaitam/data/Camelyon17/training/center_0/patient_005/patient_005_node_4.tif'
+    ext = PatchExtractor(wsi_path)
+    ext.start_extract()
 
