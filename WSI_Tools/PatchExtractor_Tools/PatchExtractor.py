@@ -186,14 +186,15 @@ class PatchExtractor:
             for y in range(y_start, y_stop, y_step):
                 for x in range(x_start, x_stop, x_step):
                     patch_poly = None
+                    cur_sample = None
                     try:
                         patch_poly = Polygon(
                             [Point(x, y), Point(x + x_step, y), Point(x + x_step, y + y_step), Point(x, y + y_step)])
                         if not patch_poly.intersects(poly):
                             continue
                         cur_sample = self.wsi.read_region(location=(x, y),
-                                              level=self.wsi_level_to_extract,
-                                              size=self.patch_size)
+                                                          level=self.wsi_level_to_extract,
+                                                          size=self.patch_size)
                     except:
                         print("bad intersection in polygons")
                     patch_tag = self.classify_metastasis_polygon(patch_poly)
@@ -215,24 +216,26 @@ class PatchExtractor:
 
             print(f"done function {fn_index}")
 
-    threads = []
-    for i, poly in enumerate(self.contours):
-        if len(threads) < MAX_EXTRACTION_THREADS:
-            t = threading.Thread(target=parallel_polygon_extraction, args=(poly, i))
-            t.start()
-            threads.append(t)
-        else:  # sleepy spinlock
+        threads = []
+        i = 0
+        while i < len(self.contours):
+            while len(threads) < MAX_EXTRACTION_THREADS:
+                t = threading.Thread(target=parallel_polygon_extraction, args=(self.contours[i], i))
+                t.start()
+                threads.append(t)
+                i += 1
             while len(threads) == MAX_EXTRACTION_THREADS:
                 time.sleep(THREAD_POOLING_TIME_SEC)
                 for thread in threads:
-                    if thread.isAlive():
+                    if thread.is_alive():
                         continue
                     else:
                         thread.join()
                         threads.remove(thread)
-    print(f"|all luanche remaning {len(threads)}")
-    for remaining_thread in threads:
-        remaining_thread.join()
+
+        print(f"all threads launched, waiting for remaining {len(threads)} threads")
+        for remaining_thread in threads:
+            remaining_thread.join()
 
 
 """
