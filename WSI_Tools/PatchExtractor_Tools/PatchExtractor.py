@@ -20,6 +20,7 @@ from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import *
 from abc import ABC
 import threading
 
+
 # BIG TODO:
 #   1) merge micro&macro together?
 
@@ -126,20 +127,19 @@ class PatchExtractor:
                 x = float(point[0][0])
                 y = float(point[0][1])
                 cur_polygon.append(Point(x, y))
-
-            polly = Polygon(cur_polygon)
-
-            box = polly.minimum_rotated_rectangle
-            x, y = box.exterior.coords.xy
-            axis = (Point(x[0], y[0]).distance(Point(x[1], y[1])), Point(x[1], y[1]).distance(Point(x[2], y[2])))
-            if axis[0] == 0 or axis[1] == 0 or axis[1] / axis[0] > DROP_WSI_SCANNER_NOISE_LINE_THRESH or axis[0] / \
-                    axis[1] > DROP_WSI_SCANNER_NOISE_LINE_THRESH:
-                print("Dropping scanner noise")
+            try:
+                polly = Polygon(cur_polygon)
+                box = polly.minimum_rotated_rectangle
+                x, y = box.exterior.coords.xy
+                axis = (Point(x[0], y[0]).distance(Point(x[1], y[1])), Point(x[1], y[1]).distance(Point(x[2], y[2])))
+                if axis[0] == 0 or axis[1] == 0 or axis[1] / axis[0] > DROP_WSI_SCANNER_NOISE_LINE_THRESH or axis[0] / \
+                        axis[1] > DROP_WSI_SCANNER_NOISE_LINE_THRESH:
+                    print("Dropping scanner noise")
+                    continue
+            except:
+                # the polygon doesn't form a "valid" shape
+                print("generate_contours_around_wsi: Exception: the polygon doesn't form a valid shape")
                 continue
-            # except:
-            # the polygon doesn't form a "valid" shape
-            #    print("in except")
-            #    continue
 
             # if passed all filters, append to real contours
             valid_contours += [cont]
@@ -176,7 +176,7 @@ class PatchExtractor:
         x_step = DEFAULT_PATCH_SIZE[0] - DEFAULT_PATCH_OVERLAP[0]
         y_step = DEFAULT_PATCH_SIZE[1] - DEFAULT_PATCH_OVERLAP[1]
 
-        def parallel_polygon_extraction(poly,fn_index):
+        def parallel_polygon_extraction(poly, fn_index):
             print(f"started function {fn_index}")
             # for i, poly in enumerate(self.contours):
             #    print(f"Dealing with poly num {i} out of {len(self.contours)}")
@@ -185,15 +185,20 @@ class PatchExtractor:
             x_stop, y_stop = int(max(x_arr)), int(max(y_arr))
             for y in range(y_start, y_stop, y_step):
                 for x in range(x_start, x_stop, x_step):
-                    patch_poly = Polygon(
-                        [Point(x, y), Point(x + x_step, y), Point(x + x_step, y + y_step), Point(x, y + y_step)])
-                    if not patch_poly.intersects(poly):
-                        continue
-                    cur_sample = self.wsi.read_region(location=(x, y),
-                                                      level=self.wsi_level_to_extract,
-                                                      size=self.patch_size)
-                    output_PIL_img_name = f'{self.wsi_name}_xy_{x}_{y}_{self.patch_size[0]}x{self.patch_size[1]}.png'
+                    patch_poly = None
+                    try:
+                        patch_poly = Polygon(
+                            [Point(x, y), Point(x + x_step, y), Point(x + x_step, y + y_step), Point(x, y + y_step)])
+                        if not patch_poly.intersects(poly):
+                            continue
+                        cur_sample = self.wsi.read_region(location=(x, y),
+                                              level=self.wsi_level_to_extract,
+                                              size=self.patch_size)
+                    except:
+                        print("bad intersection in polygons")
                     patch_tag = self.classify_metastasis_polygon(patch_poly)
+
+                    output_PIL_img_name = f'{self.wsi_name}_xy_{x}_{y}_{self.patch_size[0]}x{self.patch_size[1]}.png'
                     output_PIL_img_full_path = ''
                     if patch_tag == PatchTag.NEGATIVE:
                         output_PIL_img_full_path = os.path.join(NEGATIVE_OUTPUT_DIR, output_PIL_img_name)
@@ -207,29 +212,27 @@ class PatchExtractor:
                         raise Exception("Patch has no tag")
 
                     cur_sample.save(output_PIL_img_full_path)
+
             print(f"done function {fn_index}")
 
-
-        threads = []
-        for i,poly in enumerate(self.contours):
-            if len(threads) < MAX_EXTRACTION_THREADS:
-                t = threading.Thread(target=parallel_polygon_extraction, args=(poly,i))
-                t.start()
-                threads.append(t)
-            else:  # sleepy spinlock
-                while len(threads) == MAX_EXTRACTION_THREADS:
-                    time.sleep(THREAD_POOLING_TIME_SEC)
-                    for thread in threads:
-                        if thread.isAlive():
-                            continue
-                        else:
-                            thread.join()
-                            threads.remove(thread)
-        print(f"|all luanche remaning {len(threads)}")
-        for remaining_thread in threads:
-            remaining_thread.join()
-
-
+    threads = []
+    for i, poly in enumerate(self.contours):
+        if len(threads) < MAX_EXTRACTION_THREADS:
+            t = threading.Thread(target=parallel_polygon_extraction, args=(poly, i))
+            t.start()
+            threads.append(t)
+        else:  # sleepy spinlock
+            while len(threads) == MAX_EXTRACTION_THREADS:
+                time.sleep(THREAD_POOLING_TIME_SEC)
+                for thread in threads:
+                    if thread.isAlive():
+                        continue
+                    else:
+                        thread.join()
+                        threads.remove(thread)
+    print(f"|all luanche remaning {len(threads)}")
+    for remaining_thread in threads:
+        remaining_thread.join()
 
 
 """
