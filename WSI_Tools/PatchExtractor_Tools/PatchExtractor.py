@@ -82,6 +82,8 @@ class PatchExtractor:
             self.wsi_Center_ID = wsi_path[wsi_path.find('center') + 7:wsi_path.find('center') + 8]
             print('self.wsi_center_ID', self.wsi_Center_ID)
 
+        assert 0 <= self.wsi_Center_ID < N_DATA_CENTERS
+
     def read_tag(self):
         with open(self.tag_csv_file_path) as csv_file:
             lines = csv_file.readlines()
@@ -96,15 +98,15 @@ class PatchExtractor:
         return os.path.join(self.xml_dir_path, self.wsi_name[:-3] + 'xml')
 
     def generate_contours_around_wsi(self, down_scaled_image_annotated_boundries_output_dir_path):
-        xxx, yyy = self.wsi.level_dimensions[0][0] / DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE, \
-                   self.wsi.level_dimensions[0][1] / DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE
+        xxx, yyy = self.wsi.level_dimensions[0][0] / DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE[self.wsi_Center_ID], \
+                   self.wsi.level_dimensions[0][1] / DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE[self.wsi_Center_ID]
         im = self.wsi.get_thumbnail(size=(xxx, yyy))
         img_gray = ImageOps.grayscale(im)
         img_gray = np.array(img_gray)
-        img_gray[img_gray >= BLACK_COLOR_THRESH_TO_IGNORE] = 0
-        blur = cv2.GaussianBlur(np.array(img_gray), IMG_CONTOUR_BLUR_KERNEL_SIZE, 0)
+        img_gray[img_gray >= BLACK_COLOR_THRESH_TO_IGNORE[self.wsi_Center_ID]] = 0
+        blur = cv2.GaussianBlur(np.array(img_gray), IMG_CONTOUR_BLUR_KERNEL_SIZE[self.wsi_Center_ID], 0)
         # apply binary thresholding
-        ret, thresh = cv2.threshold(blur, CV2_THRESH_FOR_EDGES, 255, cv2.THRESH_OTSU)
+        ret, thresh = cv2.threshold(blur, CV2_THRESH_FOR_EDGES[self.wsi_Center_ID], 255, cv2.THRESH_OTSU)
         # detect the contours on the binary image using cv2.CHAIN_APPROX_NONE
         contours, hierarchy = cv2.findContours(image=thresh, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
         # draw contours on the original image
@@ -117,7 +119,7 @@ class PatchExtractor:
 
         for cont in contours:
             # ignore if too big (to ignore boundaries of the wsi)
-            if len(cont) > (xxx + yyy) * 0.9 or len(cont) < IMG_CONTOUR_MIN_NUM_POINTS:
+            if len(cont) > (xxx + yyy) * 0.9 or len(cont) < IMG_CONTOUR_MIN_NUM_POINTS[self.wsi_Center_ID]:
                 continue
             # filter vertical/horizontal noise lines from wsi scanner
             polly = None
@@ -132,8 +134,8 @@ class PatchExtractor:
                 box = polly.minimum_rotated_rectangle
                 x, y = box.exterior.coords.xy
                 axis = (Point(x[0], y[0]).distance(Point(x[1], y[1])), Point(x[1], y[1]).distance(Point(x[2], y[2])))
-                if axis[0] == 0 or axis[1] == 0 or axis[1] / axis[0] > DROP_WSI_SCANNER_NOISE_LINE_THRESH or axis[0] / \
-                        axis[1] > DROP_WSI_SCANNER_NOISE_LINE_THRESH:
+                if axis[0] == 0 or axis[1] == 0 or axis[1] / axis[0] > DROP_WSI_SCANNER_NOISE_LINE_THRESH[self.wsi_Center_ID] or axis[0] / \
+                        axis[1] > DROP_WSI_SCANNER_NOISE_LINE_THRESH[self.wsi_Center_ID]:
                     print("Dropping scanner noise")
                     continue
             except:
@@ -163,7 +165,7 @@ class PatchExtractor:
                     image_copy)
 
     # TODO: for now: all patches in node with ITC are considered itc
-    # tag = micro/macro is ignored, and we calculate the max width of the metastasis
+    # tag = micro/macro tag is ignored, and we calculate the max width of the metastasis, since WSI can include both micro/macro
     def classify_metastasis_polygon(self, polygon: Polygon):
         for contour in self.contours:
             if polygon.intersects(contour):
@@ -339,7 +341,7 @@ class PatchExtractor:
         xxx, yyy = self.wsi.level_dimensions[0][0] / 100, self.wsi.level_dimensions[0][1] / 100
         im = self.wsi.get_thumbnail(size=(xxx, yyy))
         img_gray = ImageOps.grayscale(im)
-        blur = cv2.GaussianBlur(np.array(img_gray), IMG_CONTOUR_BLUR_KERNEL_SIZE, 0)
+        blur = cv2.GaussianBlur(np.array(img_gray), IMG_CONTOUR_BLUR_KERNEL_SIZE[self.wsi_Center_ID], 0)
         # apply binary thresholding
         ret, thresh = cv2.threshold(blur, 100, 255, cv2.THRESH_OTSU)
         # detect the contours on the binary image using cv2.CHAIN_APPROX_NONE

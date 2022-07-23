@@ -7,20 +7,23 @@ knn_model = None
 pt_resnet50_model_cut = None
 
 
+# TODO: must get output of resnet50 (layer -2) and tag
+# TODO: i didnt debug here
 def init_Knn_model(
-        dataset: torchvision.datasets.VisionDataset,  # or any subclass
+        dataset,  # iterable of tuples (X,y)
         n_neighbors: int
 ):
     global knn_model
     knn_model = KNeighborsClassifier(n_neighbors=n_neighbors)
-    knn_model.fit(X_train, y_train)
-    return
+    knn_model.fit(dataset[:, 0], dataset[:, 1])
+    '''
     # Predict on dataset which model has not seen before
     y_pred = knn.predict(X_test)
     miss_classifications = y_test - y_pred
     print(f"miss classified {torch.count_nonzero(miss_classifications)} out of {len(y_test)}")
     accu = 1 - torch.count_nonzero(miss_classifications) / len(y_test)
     print(f"Accuracy {accu} ")
+    '''
 
 
 def init_pre_trained_resnet50_model():

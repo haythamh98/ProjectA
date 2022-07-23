@@ -15,6 +15,7 @@ class PatchTag(Enum):
 MY_NAME = 'hawahaitam'  # '@staff.technion.ac.il'
 NETWORK_DATABASE = os.path.join('/', 'databases', MY_NAME)
 LOCAL_DATABASE = os.path.join('/', 'data', MY_NAME)
+N_DATA_CENTERS = 5
 
 # Logger
 DISABLE_LOGGER = True
@@ -22,12 +23,13 @@ PATCH_EXTRACTORS_DEFAULT_LOGGER = None
 
 # Contours
 DOWN_SCALLED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH = os.path.join(LOCAL_DATABASE, 'Extractor_Contours_test_22_7')
-DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE = 100
-IMG_CONTOUR_BLUR_KERNEL_SIZE = (11, 11)
-CV2_THRESH_FOR_EDGES = 100
-IMG_CONTOUR_MIN_NUM_POINTS = 50
-BLACK_COLOR_THRESH_TO_IGNORE = 210
-DROP_WSI_SCANNER_NOISE_LINE_THRESH = 8
+# all params should be center specific, So must use list of n_centers size
+DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE = [100, 100, 100, 100, 100, 100]
+IMG_CONTOUR_BLUR_KERNEL_SIZE = [(11, 11), (11, 11), (11, 11), (11, 11), (11, 11), (11, 11)]
+CV2_THRESH_FOR_EDGES = [100, 100, 100, 100, 100, 100]
+IMG_CONTOUR_MIN_NUM_POINTS = [50, 50, 50, 50, 50, 50]
+BLACK_COLOR_THRESH_TO_IGNORE = [210, 210, 210, 210, 210]
+DROP_WSI_SCANNER_NOISE_LINE_THRESH = [8, 8, 8, 8, 8]
 
 # annotations
 annotation_xml_dir_path = os.path.join(LOCAL_DATABASE, 'Annotations')
