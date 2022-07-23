@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # os.add_dll_directory(r"C:\Users\haytham\Downloads\openslide-win64-20171122\openslide-win64-20171122\bin")
 
     for i in range(4,5):
-        wsi_path = rf'/home/hawahaitam/data/Camelyon17/training/center_2/patient_044/patient_044_node_{i}.tif'
+        wsi_path = rf'/home/hawahaitam/data/Camelyon17/training/center_0/patient_000/patient_000_node_{i}.tif'
         ext = PatchExtractor(wsi_path)
         print("in", wsi_path)
         ext.start_extract()

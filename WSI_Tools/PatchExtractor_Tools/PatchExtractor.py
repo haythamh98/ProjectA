@@ -219,7 +219,7 @@ class PatchExtractor:
         threads = []
         i = 0
         while i < len(self.contours):
-            while len(threads) < MAX_EXTRACTION_THREADS:
+            while len(threads) < MAX_EXTRACTION_THREADS and i < len(self.contours):
                 t = threading.Thread(target=parallel_polygon_extraction, args=(self.contours[i], i))
                 t.start()
                 threads.append(t)
