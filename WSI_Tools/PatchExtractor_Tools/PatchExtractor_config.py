@@ -22,8 +22,8 @@ DISABLE_LOGGER = True
 PATCH_EXTRACTORS_DEFAULT_LOGGER = None
 
 # Contours
-DOWN_SCALLED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH = os.path.join(LOCAL_DATABASE, 'Extractor_Contours_test_22_7')
-# all params should be center specific, So must use list of n_centers size
+DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH = os.path.join(LOCAL_DATABASE, 'Extractor_Contours_test_22_7')
+# all params should be center specific, So must use list of n_centers size, one for each center
 DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE = [100, 100, 100, 100, 100, 100]
 IMG_CONTOUR_BLUR_KERNEL_SIZE = [(11, 11), (11, 11), (11, 11), (11, 11), (11, 11), (11, 11)]
 CV2_THRESH_FOR_EDGES = [100, 100, 100, 100, 100, 100]

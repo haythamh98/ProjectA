@@ -37,7 +37,7 @@ class PatchExtractor:
                  micro_output_dir: str = MICRO_OUTPUT_DIR,
                  itc_output_dir: str = ITC_OUTPUT_DIR,
                  wsi_level: int = DEFAULT_EXTRACTION_LEVEL,
-                 down_scaled_image_annotated_boundaries_output_dir_path: str = DOWN_SCALLED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH,
+                 down_scaled_image_annotated_boundaries_output_dir_path: str = DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH,
                  logger=PATCH_EXTRACTORS_DEFAULT_LOGGER
                  ):
 
@@ -137,6 +137,7 @@ class PatchExtractor:
                 if axis[0] == 0 or axis[1] == 0 or axis[1] / axis[0] > DROP_WSI_SCANNER_NOISE_LINE_THRESH[self.wsi_Center_ID] or axis[0] / \
                         axis[1] > DROP_WSI_SCANNER_NOISE_LINE_THRESH[self.wsi_Center_ID]:
                     print("Dropping scanner noise")
+                    # TODO: some noise still pass, check better condition
                     continue
             except:
                 # the polygon doesn't form a "valid" shape
