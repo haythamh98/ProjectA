@@ -24,6 +24,7 @@ class XMLAnnotationHandler:
         self.polygons_metastasis_tag = []
         if os.path.isfile(xml_file_path):
             self._parse_xml_file()
+
         else:
             pass  # negative/itc only mode
 

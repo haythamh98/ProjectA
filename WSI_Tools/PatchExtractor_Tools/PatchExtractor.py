@@ -74,13 +74,11 @@ class PatchExtractor:
     def analyze_wsi_path(self, wsi_path):
         self.wsi_path = wsi_path
         self.wsi_name = os.path.split(wsi_path)[1]
-        print("self.wsi_name = os.path.split(wsi_path)[1][:-4]", self.wsi_name)
         self.patient_ID = int(self.wsi_name.split('_')[1])
         self.patient_node_ID = int(self.wsi_name.split('_')[3][0])
         self.wsi_Center_ID = -1
         if 'center' in wsi_path:
-            self.wsi_Center_ID = wsi_path[wsi_path.find('center') + 7:wsi_path.find('center') + 8]
-            print('self.wsi_center_ID', self.wsi_Center_ID)
+            self.wsi_Center_ID = int(wsi_path[wsi_path.find('center') + 7:wsi_path.find('center') + 8])
 
         assert 0 <= self.wsi_Center_ID < N_DATA_CENTERS
 
@@ -103,7 +101,7 @@ class PatchExtractor:
         im = self.wsi.get_thumbnail(size=(xxx, yyy))
         img_gray = ImageOps.grayscale(im)
         img_gray = np.array(img_gray)
-        img_gray[img_gray >= BLACK_COLOR_THRESH_TO_IGNORE[self.wsi_Center_ID]] = 0
+        img_gray[img_gray > BLACK_COLOR_THRESH_TO_IGNORE[self.wsi_Center_ID]] = 0
         blur = cv2.GaussianBlur(np.array(img_gray), IMG_CONTOUR_BLUR_KERNEL_SIZE[self.wsi_Center_ID], 0)
         # apply binary thresholding
         ret, thresh = cv2.threshold(blur, CV2_THRESH_FOR_EDGES[self.wsi_Center_ID], 255, cv2.THRESH_OTSU)
@@ -134,7 +132,8 @@ class PatchExtractor:
                 box = polly.minimum_rotated_rectangle
                 x, y = box.exterior.coords.xy
                 axis = (Point(x[0], y[0]).distance(Point(x[1], y[1])), Point(x[1], y[1]).distance(Point(x[2], y[2])))
-                if axis[0] == 0 or axis[1] == 0 or axis[1] / axis[0] > DROP_WSI_SCANNER_NOISE_LINE_THRESH[self.wsi_Center_ID] or axis[0] / \
+                if axis[0] == 0 or axis[1] == 0 or axis[1] / axis[0] > DROP_WSI_SCANNER_NOISE_LINE_THRESH[
+                    self.wsi_Center_ID] or axis[0] / \
                         axis[1] > DROP_WSI_SCANNER_NOISE_LINE_THRESH[self.wsi_Center_ID]:
                     print("Dropping scanner noise")
                     # TODO: some noise still pass, check better condition
@@ -160,8 +159,27 @@ class PatchExtractor:
             plt.plot(np.array(x), np.array(y))
             ax = plt.gca()
 
+        # draw wsi contours to output image
         cv2.drawContours(image=image_copy, contours=valid_contours, contourIdx=-1, color=(0, 255, 0), thickness=2,
                          lineType=cv2.LINE_AA)
+        # draw annotation contours to output image
+        annotation_contours = []
+        for poly in self.tumor_classifier.polygons:
+            x, y = poly.exterior.xy
+            xs = np.array(x) / DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE[self.wsi_Center_ID]
+            ys = np.array(y) / DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE[self.wsi_Center_ID]
+            xs = xs.astype(np.int32)
+            ys = ys.astype(np.int32)
+            # naive
+            tmp = []
+            for x,y in zip(xs,ys):
+                tmp.append([x,y])
+            annotation_contours.append(np.array(tmp))
+
+
+        cv2.drawContours(image=image_copy, contours=annotation_contours, contourIdx=-1, color=(255, 0, 0), thickness=2,
+                         lineType=cv2.LINE_AA)
+        # save image
         cv2.imwrite(os.path.join(down_scaled_image_annotated_boundries_output_dir_path, self.wsi_name + '.jpg'),
                     image_copy)
 
@@ -176,8 +194,8 @@ class PatchExtractor:
         return PatchTag.NONE
 
     def start_extract(self):
-        x_step = DEFAULT_PATCH_SIZE[0] - DEFAULT_PATCH_OVERLAP[0]
-        y_step = DEFAULT_PATCH_SIZE[1] - DEFAULT_PATCH_OVERLAP[1]
+        x_step = self.patch_size[0] - self.patch_overlap[0]
+        y_step = self.patch_size[1] - self.patch_overlap[1]
 
         def parallel_polygon_extraction(poly, fn_index):
             print(f"started function {fn_index}")
