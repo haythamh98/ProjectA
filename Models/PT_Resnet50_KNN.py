@@ -2,6 +2,8 @@ import torch
 import torchvision.datasets
 from sklearn.neighbors import KNeighborsClassifier
 from torchvision import models
+from utils.Dataset_config import *
+from utils.Dataset import *
 
 knn_model = None
 pt_resnet50_model_cut = None
@@ -14,7 +16,8 @@ def init_Knn_model(
         n_neighbors: int
 ):
     global knn_model
-    knn_model = KNeighborsClassifier(n_neighbors=n_neighbors)
+    if knn_model is None:
+        knn_model = KNeighborsClassifier(n_neighbors=n_neighbors)
     knn_model.fit(dataset[:, 0], dataset[:, 1])
     '''
     # Predict on dataset which model has not seen before
@@ -33,7 +36,16 @@ def init_pre_trained_resnet50_model():
     pt_resnet50_model_cut = torch.nn.Sequential(*(list(resnet50.children())[:-1]))  # strips off last linear layer
 
 
-def resnet50_forward(batch_tensor):
+def get_random_samples_resnet50_forward(nBatches : int = 1):
+    global pt_resnet50_model_cut
+    if pt_resnet50_model_cut is None:
+        init_pre_trained_resnet50_model()
+
+    result_tensor = torch.zeros(size=(nBatches*BATCH_SIZE, 2048))
+    tags_tensor = torch.zeros(nBatches*BATCH_SIZE)
     with torch.no_grad():
-        forward = pt_resnet50_model_cut.forward(batch_tensor)
-        return forward
+        for i, Xy in zip(range(nBatches),camelyon17_dl):
+            X, y = Xy[0], Xy[1]  # X,y shape[0] == BATCH_SIZE
+            result_tensor[i*BATCH_SIZE: (i+1) * BATCH_SIZE] = pt_resnet50_model_cut.forward(X).squeeze()
+            tags_tensor[i*BATCH_SIZE: (i+1) * BATCH_SIZE] = y
+    return result_tensor, tags_tensor

@@ -41,6 +41,8 @@ class XMLAnnotationHandler:
                     x = float(point.getAttribute("X"))
                     y = float(point.getAttribute("Y"))
                     cur_polygon.append(Point(x, y))
+            if len(cur_polygon) <= 2:
+                continue
             self.polygons.append(Polygon(cur_polygon))
 
         for poly in self.polygons:

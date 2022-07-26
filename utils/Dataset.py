@@ -21,3 +21,18 @@ camelyon17_dl = torch.utils.data.DataLoader(
     # TODO: might be better if we implement sampler which separates between train and validation
     num_workers=LOADER_N_WORKERS,
 )
+
+
+
+
+
+
+def draw_random_samples(n: int = 5):
+    # not sure how to plot when using remote :(
+    for i,Xy in enumerate(camelyon17_dl):
+        X, y = Xy[0], Xy[1]  # X,y shape[0] == BATCH_SIZE
+        print(f'Batch #{i} Size={y.shape[0]}')
+        print(f'Tags {y}')
+        if i >= n:
+            break
+
