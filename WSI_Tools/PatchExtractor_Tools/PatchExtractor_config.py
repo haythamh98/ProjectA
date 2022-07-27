@@ -23,6 +23,15 @@ PATCH_EXTRACTORS_DEFAULT_LOGGER = None
 
 # Contours
 DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH = os.path.join(LOCAL_DATABASE, 'Extractor_Contours_test_22_7')
+if not os.path.isdir(DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH):
+    try:
+        os.mkdir(DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH,mode=777)
+    except:
+        print(f"Error creating dir {DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH}")
+        raise
+
+
+# hyper-parameters
 # all params should be center specific, So must use list of n_centers size, one for each center
 DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE = [100, 100, 100, 100, 100, 100]
 IMG_CONTOUR_BLUR_KERNEL_SIZE = [(11, 11), (11, 11), (11, 11), (11, 11), (11, 11), (11, 11)]  # TODO
@@ -47,3 +56,17 @@ NEGATIVE_OUTPUT_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset', 'NEGATIVE'
 MACRO_OUTPUT_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset', 'MACRO')
 MICRO_OUTPUT_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset', 'MICRO')
 ITC_OUTPUT_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset', 'ITC')
+
+# TODO: rose look at the extracted contours images first, then manually disable bad slides by adding their name here
+# you can find them at DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH, remember to pass the right variable to
+# iterate_camelyon17_files_extract_patches(draw_contours_only=True)
+
+# Temp skip list
+BAD_FILES_SKIP_LIST = [
+    "patient_xxx_node_y",
+]
+def check_in_skip_list(filename):
+    for name in BAD_FILES_SKIP_LIST:
+        if name in filename:
+            return True
+    return false

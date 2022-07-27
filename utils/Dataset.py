@@ -21,7 +21,7 @@ camelyon17_dl = torch.utils.data.DataLoader(
     # TODO: might be better if we implement sampler which separates between train and validation
     num_workers=LOADER_N_WORKERS,
 )
-
+# TODO: use class_to_idx to map between tag number and tag name (subFolder name)
 
 
 

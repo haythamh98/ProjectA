@@ -5,8 +5,9 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config  import PatchTag as MetastasisType
 from enum import Enum
+import numpy as np
 
-MICRO_THRESHHOLD = 1 # TODO: put real num, as fucntion of wsi.level?
+MICRO_THRESHHOLD = np.Inf # TODO: put real num
 
 
 
@@ -18,8 +19,9 @@ class XMLAnnotationHandler:
     rose is lucky to have me as partner
     """
 
-    def __init__(self, xml_file_path: str):
+    def __init__(self, xml_file_path: str,level0_real_ratio=1):
         self.xml_file_path = xml_file_path
+        self.level0_real_ratio = level0_real_ratio
         self.polygons = []
         self.polygons_metastasis_tag = []
         if os.path.isfile(xml_file_path):
@@ -32,6 +34,7 @@ class XMLAnnotationHandler:
         document = minidom.parse(self.xml_file_path)
         annotations = document.getElementsByTagName("Annotation")
         assert annotations is not None
+        # read XML file
         for annotation in annotations:
             coordinates = annotation.getElementsByTagName("Coordinates")
             assert coordinates is not None and len(coordinates) == 1  # TODO: check this
@@ -42,15 +45,16 @@ class XMLAnnotationHandler:
                     y = float(point.getAttribute("Y"))
                     cur_polygon.append(Point(x, y))
             if len(cur_polygon) <= 2:
+                print(f"Annotation {self.xml_file_path} file has annotation with 2 or less points, skipping ...")
                 continue
             self.polygons.append(Polygon(cur_polygon))
-
+        # diffrentiate between macro and micro
         for poly in self.polygons:
             box = poly.minimum_rotated_rectangle  # TODO: this is naive way and not right
             x, y = box.exterior.coords.xy
             axis = (Point(x[0], y[0]).distance(Point(x[1], y[1])), Point(x[1], y[1]).distance(Point(x[2], y[2])))
             major_axis = max(axis)
-            if major_axis >= MICRO_THRESHHOLD:
+            if major_axis*self.level0_real_ratio >= MICRO_THRESHHOLD:
                 self.polygons_metastasis_tag.append(MetastasisType.MICRO)
             else:
                 self.polygons_metastasis_tag.append(MetastasisType.MACRO)
@@ -75,6 +79,4 @@ class XMLAnnotationHandler:
                             x3: float, y3: float, x4: float, y4: float):
         return self.get_polygon_metastasis(Polygon([Point(x1, y1), Point(x2, y2), Point(x3, y3), Point(x4, y4)]))
 
-    def visualize(self):
-        raise NotImplementedError  # TODO
 

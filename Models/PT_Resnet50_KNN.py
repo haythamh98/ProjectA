@@ -9,25 +9,53 @@ knn_model = None
 pt_resnet50_model_cut = None
 
 
-# TODO: must get output of resnet50 (layer -2) and tag
-# TODO: i didnt debug here
+
+'''
+1) Dataset usage example and forward into resnet50 model in "get_random_samples_resnet50_forward(nBatches : int = 1)"
+    a) the example above also includes combining the results of different forward iterations
+2) for knn module you might need to read documentation, can be found in sklearn documentation
+    
+'''
+
+
+
+
 def init_Knn_model(
-        dataset,  # iterable of tuples (X,y)
+        dataset,  # iterable, dim0 = X, dim1 = y
         n_neighbors: int
 ):
     global knn_model
-    if knn_model is None:
-        knn_model = KNeighborsClassifier(n_neighbors=n_neighbors)
-    knn_model.fit(dataset[:, 0], dataset[:, 1])
-    '''
-    # Predict on dataset which model has not seen before
-    y_pred = knn.predict(X_test)
-    miss_classifications = y_test - y_pred
-    print(f"miss classified {torch.count_nonzero(miss_classifications)} out of {len(y_test)}")
-    accu = 1 - torch.count_nonzero(miss_classifications) / len(y_test)
-    print(f"Accuracy {accu} ")
-    '''
+    knn_model = KNeighborsClassifier(n_neighbors=n_neighbors)
+    print(len(dataset))
+    knn_model.fit(dataset[0], dataset[1])
 
+def knn_predict(X):
+    global knn_model
+    assert knn_model is not None  # must init first
+    return knn_model.predict(X)
+
+def knn_validate(X_test,y_test, use_print=False):
+    global knn_model
+    assert knn_model is not None  # must init first
+    y_pred = knn_model.predict(X_test)
+    miss_classifications = y_test - y_pred
+    accu = 1 - torch.count_nonzero(miss_classifications) / len(y_test)
+    if use_print:
+        print(f"knn miss classified {torch.count_nonzero(miss_classifications)} out of {len(y_test)}")
+        print(f"Accuracy {accu} ")
+    return accu
+
+def knn_sanity_check():
+    forw,y = get_random_samples_resnet50_forward(2)
+    to_knn_train_fit = [forw[32:],y[32:]] # must stack , or change innnir implementation of init_Knn_model
+    X_test = forw[:32]
+    y_test = y[:32]
+
+    init_Knn_model(dataset=to_knn_train_fit,n_neighbors=1)
+    print("validate on same trainset, with k=0 should have 100% accuracy")
+    knn_validate(to_knn_train_fit[0],to_knn_train_fit[1],use_print=True)
+    print("now test set ... ")
+    knn_validate(X_test,y_test,use_print=True)
 
 def init_pre_trained_resnet50_model():
     global pt_resnet50_model_cut
