@@ -22,7 +22,7 @@ DISABLE_LOGGER = True
 PATCH_EXTRACTORS_DEFAULT_LOGGER = None
 
 # Contours
-DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH = os.path.join(LOCAL_DATABASE, 'Extractor_Contours_test_22_7')
+DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH = os.path.join(LOCAL_DATABASE, 'Extractor_Contours_test_27_7')
 if not os.path.isdir(DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH):
     try:
         os.mkdir(DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH,mode=777)
@@ -64,9 +64,19 @@ ITC_OUTPUT_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset', 'ITC')
 # Temp skip list
 BAD_FILES_SKIP_LIST = [
     "patient_xxx_node_y",
+    "patient_004_node_3",
+    "patient_005_node_3", ####
+    "patient_009_node_1",
+    "patient_011_node_3",
+    "patient_012_node_1", ####
+    "patient_013_node_0", ####
+    "patient_013_node_3", ####
+    "patient_018_node_2", ####
+    "patient_019_node_0",
+    "patient_019_node_2",
 ]
 def check_in_skip_list(filename):
     for name in BAD_FILES_SKIP_LIST:
         if name in filename:
             return True
-    return false
+    return False

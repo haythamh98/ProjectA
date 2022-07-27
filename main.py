@@ -17,10 +17,13 @@ import openslide
 
 
 from WSI_Tools.PatchExtractor_Tools.AnnotationHandler import XMLAnnotationHandler
-from WSI_Tools.PatchExtractor_Tools.PatchExtractor import PatchTag,PatchExtractor
+from WSI_Tools.PatchExtractor_Tools.PatchExtractor import PatchTag, PatchExtractor, \
+    iterate_camelyon17_files_extract_patches
 
 from sklearn.manifold import TSNE
 from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import *
+
+
 
 def big_file_Walkaround():
     PIL.Image.MAX_IMAGE_PIXELS = 933120000  # 21630025728 * 10
@@ -35,7 +38,14 @@ if __name__ == '__main__':
     # draw_random_samples() in Dataset
     # knn_sanity_check() in PT_Resnet50_KNN
 
-    knn_sanity_check()
+    # TODO:
+    # 1) fix extraction parameters for at least 2 centers (center 0 is done)
+    # 2) run contours extraction to check all images , if bad image add wsi name to skiplist as in example, in patchExtractor_config file
+    # 3) run extract slides (you might need to delete macro file, TODO: make sure micro has patches)
+    # 4) you might need to use GPU for faster processing
+
+    iterate_camelyon17_files_extract_patches(draw_contours_only=True)
+    # knn_sanity_check()
 
 
 

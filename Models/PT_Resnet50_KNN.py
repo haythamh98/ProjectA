@@ -11,6 +11,7 @@ pt_resnet50_model_cut = None
 
 
 '''
+rose
 1) Dataset usage example and forward into resnet50 model in "get_random_samples_resnet50_forward(nBatches : int = 1)"
     a) the example above also includes combining the results of different forward iterations
 2) for knn module you might need to read documentation, can be found in sklearn documentation
@@ -21,13 +22,12 @@ pt_resnet50_model_cut = None
 
 
 def init_Knn_model(
-        dataset,  # iterable, dim0 = X, dim1 = y
+        train_dataset,  # iterable, dim0 = X, dim1 = y
         n_neighbors: int
 ):
     global knn_model
     knn_model = KNeighborsClassifier(n_neighbors=n_neighbors)
-    print(len(dataset))
-    knn_model.fit(dataset[0], dataset[1])
+    knn_model.fit(train_dataset[0], train_dataset[1])
 
 def knn_predict(X):
     global knn_model
