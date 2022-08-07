@@ -77,3 +77,4 @@ def get_random_samples_resnet50_forward(nBatches : int = 1):
             result_tensor[i*BATCH_SIZE: (i+1) * BATCH_SIZE] = pt_resnet50_model_cut.forward(X).squeeze()
             tags_tensor[i*BATCH_SIZE: (i+1) * BATCH_SIZE] = y
     return result_tensor, tags_tensor
+

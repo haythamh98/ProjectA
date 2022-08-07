@@ -263,7 +263,7 @@ class PatchExtractor:
 # rose: draw_contours_only=True will show extracted contours in
 # PatchExtractor_config.DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH
 def iterate_camelyon17_files_extract_patches(draw_contours_only=False):
-    for root,dirs,files in os.walk(os.path.join(LOCAL_DATABASE,'Camelyon17')):
+    for root,dirs,files in os.walk(os.path.join(NETWORK_DATABASE,'Camelyon17')):
         for filename in files:
             if filename.endswith('.tif'):  # Found WSI
                 if check_in_skip_list(filename):

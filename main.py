@@ -19,7 +19,7 @@ import openslide
 from WSI_Tools.PatchExtractor_Tools.AnnotationHandler import XMLAnnotationHandler
 from WSI_Tools.PatchExtractor_Tools.PatchExtractor import PatchTag, PatchExtractor, \
     iterate_camelyon17_files_extract_patches
-
+from Baseline import *
 from sklearn.manifold import TSNE
 from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import *
 
@@ -44,8 +44,10 @@ if __name__ == '__main__':
     # 3) run extract slides (you might need to delete macro file, TODO: make sure micro has patches)
     # 4) you might need to use GPU for faster processing
 
-    iterate_camelyon17_files_extract_patches(draw_contours_only=True)
+    iterate_camelyon17_files_extract_patches(draw_contours_only=False)
     # knn_sanity_check()
+
+    # projectA_run_baseline_heatmap_build([1,2])
 
 
 

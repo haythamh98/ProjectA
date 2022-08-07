@@ -22,7 +22,7 @@ DISABLE_LOGGER = True
 PATCH_EXTRACTORS_DEFAULT_LOGGER = None
 
 # Contours
-DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH = os.path.join(LOCAL_DATABASE, 'Extractor_Contours_test_27_7')
+DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH = os.path.join(NETWORK_DATABASE, 'Extractor_Contours_test_27_07')
 if not os.path.isdir(DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH):
     try:
         os.mkdir(DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH,mode=777)
@@ -34,11 +34,11 @@ if not os.path.isdir(DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH):
 # hyper-parameters
 # all params should be center specific, So must use list of n_centers size, one for each center
 DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE = [100, 100, 100, 100, 100, 100]
-IMG_CONTOUR_BLUR_KERNEL_SIZE = [(11, 11), (11, 11), (11, 11), (11, 11), (11, 11), (11, 11)]  # TODO
-CV2_THRESH_FOR_EDGES = [100, 100, 100, 100, 100, 100]  # TODO
-IMG_CONTOUR_MIN_NUM_POINTS = [50, 50, 50, 50, 50, 50]
-BLACK_COLOR_THRESH_TO_IGNORE = [210, 0, 210, 210, 210]  # TODO
-DROP_WSI_SCANNER_NOISE_LINE_THRESH = [8, 8, 8, 8, 8]
+IMG_CONTOUR_BLUR_KERNEL_SIZE = [(11, 11), (15, 15), (9, 9), (11, 11), (11, 11), (11, 11)]  # TODO
+CV2_THRESH_FOR_EDGES = [100, 120, 100, 100, 100, 100]  # TODO
+IMG_CONTOUR_MIN_NUM_POINTS = [50, 55, 50, 50, 50, 50]
+BLACK_COLOR_THRESH_TO_IGNORE = [210, 220, 230, 210, 210]  # TODO
+DROP_WSI_SCANNER_NOISE_LINE_THRESH = [8, 6, 8, 8, 8]#####
 
 # annotations
 annotation_xml_dir_path = os.path.join(LOCAL_DATABASE, 'Annotations')
@@ -72,8 +72,9 @@ BAD_FILES_SKIP_LIST = [
     "patient_013_node_0", ####
     "patient_013_node_3", ####
     "patient_018_node_2", ####
-    "patient_019_node_0",
-    "patient_019_node_2",
+    
+    
+    
 ]
 def check_in_skip_list(filename):
     for name in BAD_FILES_SKIP_LIST:
