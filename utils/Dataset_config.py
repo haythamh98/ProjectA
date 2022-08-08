@@ -7,6 +7,7 @@ from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import LOCAL_DATABASE
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
 DATASET_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset')
+DUMMY_DATASET_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset_dummy')
 
 
 # image transforms after load

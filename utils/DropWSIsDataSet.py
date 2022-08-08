@@ -67,12 +67,17 @@ class DropWSIsDataSet(DatasetFolder):
         assert len(validation_WSI_IDs) > 0
         # eg. patient_044_node_4.tif_xy_38555_14340_512x512.png
         img_name = os.path.split(img_path)[1].split('_')
-        patient_ID = img_name[1]
-        node_ID = img_name[3]
+        # print(img_name)
+        patient_ID = int(img_name[1])
+        # print("patient_ID",patient_ID)
+        node_ID = int(img_name[3][:-4]) # TODO: fix this error, name should not include .tif after node ID
         if is_validation_set:
             for tuple_patient_node in validation_WSI_IDs:
+                # print(tuple_patient_node)
                 patient, node = tuple_patient_node
+                # print(patient, node)
                 if patient_ID ==  patient and node_ID == node:
+                    # print("found" , patient, node)
                     try:
                         img = Image.open(img_path)
                         if img.size[0] > 0 and img.size[1] > 0:
@@ -81,6 +86,7 @@ class DropWSIsDataSet(DatasetFolder):
                     except:
                         print(f"image {img_path} is corrupted")
                         return False
+            return False
         else:
             for tuple_patient_node in validation_WSI_IDs:
                 patient, node = tuple_patient_node
@@ -89,12 +95,12 @@ class DropWSIsDataSet(DatasetFolder):
             try:
                 img = Image.open(img_path)
                 if img.size[0] > 0 and img.size[1] > 0:
-                    print(f"image {img_path} is trian")
+                    print(f"image {img_path} is train")
                     return True
             except:
                 print(f"image {img_path} is corrupted")
                 return False
-
+        raise "should not reach here"
 
 
 

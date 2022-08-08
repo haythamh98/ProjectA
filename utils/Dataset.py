@@ -11,24 +11,27 @@ camelyon17_train_dl = None
 camelyon17_validation_dl = None
 
 
-def init2222_ds_dl(validation_WSI_IDs, sampler = None):
+def init2222_ds_dl(validation_WSI_IDs,use_dummy_ds = False, sampler = None):
     global camelyon17_train_ds,camelyon17_validation_ds,camelyon17_train_dl,camelyon17_validation_dl
     # Dataset
+    print("init camelyon17_train_ds")
     camelyon17_train_ds = DropWSIsDataSet(
-        root=DATASET_DIR,
+        root=DATASET_DIR if not use_dummy_ds else DUMMY_DATASET_DIR,
         transform=ds_transforms,
         target_transform=None,
         validation_WSI_IDs=validation_WSI_IDs,
         is_validation=False,
     )
+    print("init camelyon17_validation_ds")
     camelyon17_validation_ds = DropWSIsDataSet(
-        root=DATASET_DIR,
+        root=DATASET_DIR if not use_dummy_ds else DUMMY_DATASET_DIR,
         transform=ds_transforms,
         target_transform=None,
         validation_WSI_IDs=validation_WSI_IDs,
         is_validation=True,
     )
     # Dataloader
+    print("init camelyon17_train_dl")
     camelyon17_train_dl = torch.utils.data.DataLoader(
         dataset=camelyon17_train_ds,
         batch_size=BATCH_SIZE,
@@ -36,6 +39,7 @@ def init2222_ds_dl(validation_WSI_IDs, sampler = None):
         num_workers=LOADER_N_WORKERS,
     )
     # TODO: use class_to_idx to map between tag number and tag name (subFolder name)
+    print("init camelyon17_validation_dl")
     camelyon17_validation_dl = torch.utils.data.DataLoader(
         dataset=camelyon17_validation_ds,
         batch_size=BATCH_SIZE,

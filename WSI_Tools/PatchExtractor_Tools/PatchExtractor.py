@@ -1,9 +1,8 @@
 import time
 
-import matplotlib
-
-matplotlib.use('GTK3Agg')
-import matplotlib.pyplot as plt
+#import matplotlib
+#matplotlib.use('GTK3Agg')
+#import matplotlib.pyplot as plt
 
 import os.path, sys
 import cv2
@@ -158,8 +157,8 @@ class PatchExtractor:
             self.contours.append(polly)
 
             x, y = polly.exterior.xy
-            plt.plot(np.array(x), np.array(y))
-            ax = plt.gca()
+            #plt.plot(np.array(x), np.array(y))
+            #ax = plt.gca()
 
         # draw wsi contours to output image
         cv2.drawContours(image=image_copy, contours=valid_contours, contourIdx=-1, color=(0, 255, 0), thickness=2,
