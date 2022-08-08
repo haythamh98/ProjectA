@@ -1,4 +1,8 @@
-from torch.utils.data import IterableDataset
+from typing import Callable, Any, Optional
+
+from PIL import Image
+from torchvision.datasets.folder import default_loader, DatasetFolder
+
 from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import PYTORCH_IMAGE_DATASET_PATH
 import torch
 import os
@@ -36,17 +40,17 @@ class DropWSIsDataSet(DatasetFolder):
 
     def __init__(
             self,
-            root: str,
+            root: str = PYTORCH_IMAGE_DATASET_PATH,
             transform: Optional[Callable] = None,
             target_transform: Optional[Callable] = None,
             loader: Callable[[str], Any] = default_loader,
-            validation_WSI_IDs = None,
+            validation_WSI_IDs = None, ##### array of tuples (patient_ID, node_ID) for validation
             is_validation = False
     ):
         self.validation_WSI_IDs = validation_WSI_IDs
         self.is_validation = is_validation
 
-        self.is_valid_function = lambda img_path: is_valid(img_path,self.is_validation)
+        self.is_valid_function = lambda img_path: self.is_valid(img_path,self.is_validation,validation_WSI_IDs)
 
         super().__init__(
             root,
@@ -57,21 +61,40 @@ class DropWSIsDataSet(DatasetFolder):
             is_valid_file=self.is_valid_function,
         )
         self.imgs = self.samples
+
     @staticmethod
-    def is_valid(img_path:str,is_validation_set:bool,validation_WSI_IDs):
+    def is_valid(img_path:str,is_validation_set:bool,validation_WSI_IDs) -> bool:
+        assert len(validation_WSI_IDs) > 0
+        # eg. patient_044_node_4.tif_xy_38555_14340_512x512.png
+        img_name = os.path.split(img_path)[1].split('_')
+        patient_ID = img_name[1]
+        node_ID = img_name[3]
         if is_validation_set:
-            patient_ID = os.path
+            for tuple_patient_node in validation_WSI_IDs:
+                patient, node = tuple_patient_node
+                if patient_ID ==  patient and node_ID == node:
+                    try:
+                        img = Image.open(img_path)
+                        if img.size[0] > 0 and img.size[1] > 0:
+                            print(f"image {img_path} is validation")
+                            return True
+                    except:
+                        print(f"image {img_path} is corrupted")
+                        return False
+        else:
+            for tuple_patient_node in validation_WSI_IDs:
+                patient, node = tuple_patient_node
+                if patient_ID == patient and node_ID == node:
+                    return False
+            try:
+                img = Image.open(img_path)
+                if img.size[0] > 0 and img.size[1] > 0:
+                    print(f"image {img_path} is trian")
+                    return True
+            except:
+                print(f"image {img_path} is corrupted")
+                return False
 
 
 
-
-
-        try:
-            img = Image.open(image_path)
-            if img.size[0] > 0 and img.size[1] > 0:
-                return True
-        except:
-            print(f"image {image_path} is corrupted")
-
-        return False
 

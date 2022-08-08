@@ -6,7 +6,7 @@ import torch
 
 def get_random_samples_resnet50_forward_all_tags(nBatches : int = 1):
     if PT_Resnet50_KNN.pt_resnet50_model_cut is None:
-        print("initinnngg")
+        print("initinnngg resnet50")
         PT_Resnet50_KNN.init_pre_trained_resnet50_model()
     BATCH_SIZE = 64  # for now
 

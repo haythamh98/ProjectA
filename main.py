@@ -44,8 +44,14 @@ if __name__ == '__main__':
     # 3) run extract slides (you might need to delete macro file, TODO: make sure micro has patches)
     # 4) you might need to use GPU for faster processing
 
-    iterate_camelyon17_files_extract_patches(draw_contours_only=False)
+    # iterate_camelyon17_files_extract_patches(draw_contours_only=False)
     # knn_sanity_check()
+
+    from utils import Dataset
+    validation_WSI_IDs = [
+        tuple((44,0)),
+    ]
+    Dataset.init2222_ds_dl(validation_WSI_IDs)
 
     # projectA_run_baseline_heatmap_build([1,2])
 
