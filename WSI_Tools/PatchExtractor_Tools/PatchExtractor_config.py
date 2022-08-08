@@ -52,10 +52,11 @@ MAX_EXTRACTION_THREADS = 8
 THREAD_POOLING_TIME_SEC = 10
 
 # extraction dirs
-NEGATIVE_OUTPUT_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset', 'NEGATIVE')
-MACRO_OUTPUT_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset', 'MACRO')
-MICRO_OUTPUT_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset', 'MICRO')
-ITC_OUTPUT_DIR = os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset', 'ITC')
+PYTORCH_IMAGE_DATASET_PATH =  os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset')
+NEGATIVE_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'NEGATIVE')
+MACRO_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'MACRO')
+MICRO_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'MICRO')
+ITC_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'ITC')
 
 # TODO: rose look at the extracted contours images first, then manually disable bad slides by adding their name here
 # you can find them at DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH, remember to pass the right variable to

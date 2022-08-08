@@ -7,9 +7,7 @@ camelyon17_dl = None
 
 
 def is_valid_pil_image(image_path : str):
-    img = Image.open(image_path)
-    if img.size[0] > 0 and img.size[1] > 0:
-        return True
+
     try:
         img =  Image.open(image_path)
         if img.size[0] > 0 and img.size[1] > 0 :
@@ -21,7 +19,7 @@ def is_valid_pil_image(image_path : str):
 
 
 
-def init_ds_dl():
+def init_ds_dl(sampler = None):
     global camelyon17_ds,camelyon17_dl
     # Dataset
     camelyon17_ds = torchvision.datasets.ImageFolder(
