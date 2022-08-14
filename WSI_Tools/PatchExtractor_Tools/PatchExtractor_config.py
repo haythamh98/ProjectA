@@ -53,6 +53,7 @@ THREAD_POOLING_TIME_SEC = 10
 
 # extraction dirs
 PYTORCH_IMAGE_DATASET_PATH =  os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset')
+DUMMY_PYTORCH_IMAGE_DATASET_PATH =  os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset_dummy')
 NEGATIVE_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'NEGATIVE')
 MACRO_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'MACRO')
 MICRO_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'MICRO')
@@ -73,7 +74,21 @@ BAD_FILES_SKIP_LIST = [
     "patient_013_node_0", ####
     "patient_013_node_3", ####
     "patient_018_node_2", ####
-    
+    "patient_019_node_0",
+    "patient_019_node_2",
+    "patient_020_node_2",
+    "patient_022_node_2",
+    "patient_024_node_4",
+    "patient_026_node_4",
+    "patient_027_node_0",
+    "patient_027_node_2",
+    "patient_029_node_1",
+    "patient_034_node_1",
+    "patient_035_node_2",
+    "patient_035_node_3",
+    "patient_036_node_1",
+    "patient_036_node_2",
+    "patient_039_node_1",
     
     
 ]

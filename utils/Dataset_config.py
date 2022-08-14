@@ -19,7 +19,7 @@ ds_transforms = transforms.Compose([  # TODO
 ])
 
 # Properties
-LOADER_N_WORKERS = 7
+LOADER_N_WORKERS = 1
 
 # training
 BATCH_SIZE = 64

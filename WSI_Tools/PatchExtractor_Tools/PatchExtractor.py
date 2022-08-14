@@ -84,6 +84,8 @@ class PatchExtractor:
         assert 0 <= self.wsi_Center_ID < N_DATA_CENTERS
 
     def read_tag(self):
+        if self.tag_csv_file_path is None:
+            return  # extract for test
         with open(self.tag_csv_file_path) as csv_file:
             lines = csv_file.readlines()
             for line in lines:
@@ -224,13 +226,13 @@ class PatchExtractor:
                     output_PIL_img_name = f'{self.wsi_name}_xy_{x}_{y}_{self.patch_size[0]}x{self.patch_size[1]}.png'
                     output_PIL_img_full_path = ''
                     if patch_tag == PatchTag.NEGATIVE:
-                        output_PIL_img_full_path = os.path.join(NEGATIVE_OUTPUT_DIR, output_PIL_img_name)
+                        output_PIL_img_full_path = os.path.join(self.negative_output_dir , output_PIL_img_name)
                     elif patch_tag == PatchTag.MACRO:
-                        output_PIL_img_full_path = os.path.join(MACRO_OUTPUT_DIR, output_PIL_img_name)
+                        output_PIL_img_full_path = os.path.join(self.macro_output_dir , output_PIL_img_name)
                     elif patch_tag == PatchTag.MICRO:
-                        output_PIL_img_full_path = os.path.join(MICRO_OUTPUT_DIR, output_PIL_img_name)
+                        output_PIL_img_full_path = os.path.join(self.micro_output_dir , output_PIL_img_name)
                     elif patch_tag == PatchTag.ITC:
-                        output_PIL_img_full_path = os.path.join(ITC_OUTPUT_DIR, output_PIL_img_name)
+                        output_PIL_img_full_path = os.path.join(self.itc_output_dir , output_PIL_img_name)
                     else:
                         raise Exception("Patch has no tag")
 

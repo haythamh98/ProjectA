@@ -32,7 +32,9 @@ def init_Knn_model(
 def knn_predict(X):
     global knn_model
     assert knn_model is not None  # must init first
-    return knn_model.predict(X)
+    x = X.detach()
+    print(x.shape)
+    return knn_model.predict(x )
 
 def knn_validate(X_test,y_test, use_print=False):
     global knn_model

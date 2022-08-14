@@ -22,7 +22,7 @@ from WSI_Tools.PatchExtractor_Tools.PatchExtractor import PatchTag, PatchExtract
 from Baseline import *
 from sklearn.manifold import TSNE
 from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import *
-
+from utils.Dataset_config import *
 
 
 def big_file_Walkaround():
@@ -44,14 +44,21 @@ if __name__ == '__main__':
     # 3) run extract slides (you might need to delete macro file, TODO: make sure micro has patches)
     # 4) you might need to use GPU for faster processing
 
-    iterate_camelyon17_files_extract_patches(draw_contours_only=False)
+    # iterate_camelyon17_files_extract_patches(draw_contours_only=False)
     # knn_sanity_check()
+    projectA_run_baseline()
 
-    from utils import Dataset
-    validation_WSI_IDs = [
-        tuple((44,0)),
-    ]
-    Dataset.init2222_ds_dl(validation_WSI_IDs,use_dummy_ds=True)  # one problem: if validation doesnt contain images of two classes
+
+
+    #itera = iter(ds)
+    #lll = list([next(itera),next(itera),next(itera)])
+    #print(lll)
+
+    print("bye")
+
+
+    #
+    # Dataset.init2222_ds_dl(validation_WSI_IDs,use_dummy_ds=True)
 
     # projectA_run_baseline_heatmap_build([1,2])
 
