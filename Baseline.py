@@ -1,9 +1,11 @@
 import os.path
+import sys
 
 import torchvision
 from matplotlib import pyplot as plt
 
 from PIL.Image import Image
+from shapely.geometry import Polygon, Point
 
 from utils.Baseline_config import *
 from Models import PT_Resnet50_KNN
@@ -25,11 +27,14 @@ from utils.Baseline_config import TEMP_EXTRACTION_PATH_FOR_TEST_WSI
 date = datetime.now().strftime("%Y_%m_%d_%I_%M_%S_%p")
 
 logger = logging.getLogger(__name__)
+
 logging.basicConfig(filename=rf"../logging/projectA_baseline_{date}",
                     filemode='a',
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.DEBUG)
+
+# logging.basicConfig(stream=sys.stdout,level=logging.DEBUG)
 pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.INFO)
 
@@ -63,7 +68,19 @@ def projectA_run_baseline():
     logger.debug("hello debug mode")
 
     interesting_slides = [
-        tuple((0, 0))
+        tuple((9, 1)),
+        tuple((10, 4)),
+        tuple((12, 0)),
+        tuple((15, 1)),
+        tuple((15, 2)),
+        tuple((16, 1)),
+        tuple((17, 1)),
+        tuple((17, 4)),
+        tuple((20, 2)),
+        tuple((20, 4)),
+        tuple((22, 4)),
+        tuple((24, 1)),
+        tuple((24, 2)),
     ]
     for interesting_slide in interesting_slides:
         logger.info(f"using all dataset for train, then validating {interesting_slide}")
@@ -76,7 +93,7 @@ def projectA_run_baseline():
         tags_tensor = torch.zeros(train_n_batches * BATCH_SIZE)
         with torch.no_grad():
             for i, xxx in zip(range(train_n_batches), Dataset.camelyon17_train_dl):
-                if 1 % 10 == 0:
+                if i % 10 == 0:
                     logger.debug(f"processing batch num {i} out of {train_n_batches}")
                 imges_tensort, tags = xxx[0], xxx[1]
                 resnt50_output_tensor[i * BATCH_SIZE: (i + 1) * BATCH_SIZE] = \
@@ -91,8 +108,8 @@ def projectA_run_baseline():
         logger.debug(f"Done, now extracting full WSI to {TEMP_EXTRACTION_PATH_FOR_TEST_WSI}, clearing it first")
         try:
             import shutil
-            # TODO shutil.rmtree(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
-            # os.mkdir(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
+            shutil.rmtree(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
+            os.mkdir(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
         except:
             TEMP_EXTRACTION_PATH_FOR_TEST_WSI = os.path.join(os.path.split(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)[0],
                                                              f'stam_{datetime.now().strftime("%Y_%m_%d-%I:%M:%S_%p")}')
@@ -104,7 +121,6 @@ def projectA_run_baseline():
         print(f"start extract")
         extr = PatchExtractor(
             wsi_path=form_wsi_path_by_ID(interesting_slide),
-            xml_dir_path='hell',  # so it wont use annotation, and classify all as negative
             patch_size=DEFAULT_PATCH_SIZE,
             patch_overlap=(0, 0),
             negative_output_dir=TEMP_EXTRACTION_PATH_FOR_TEST_WSI,
@@ -114,17 +130,19 @@ def projectA_run_baseline():
             down_scaled_image_annotated_boundaries_output_dir_path=DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH,
             logger=PATCH_EXTRACTORS_DEFAULT_LOGGER,
         )
-        # TODO extr.start_extract()
+        extr.start_extract()
         logger.debug(f"done extract")
 
-        heatmap_tensor = torch.zeros((3,extr.wsi.dimensions[0] // 512, extr.wsi.dimensions[1] // 512))
+        heatmap_tensor = torch.zeros((3,(extr.wsi.dimensions[0] // 512)+1, (extr.wsi.dimensions[1] // 512)+1))
+        pred_heatmap_tensor = torch.zeros(((extr.wsi.dimensions[0] // 512)+1, (extr.wsi.dimensions[1] // 512)+1))
+        print("heatmap size",heatmap_tensor.shape)
         one_wsi_patches_names = os.listdir(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
         to_tensor_transform = transforms.ToTensor()
 
         for x in range(0, len(one_wsi_patches_names), BATCH_SIZE):
             print(f"in batch num {x} out of {len(one_wsi_patches_names)} ")
             tmp_tensor = torch.zeros([64, 3, 512, 512])
-            for y in range(0, BATCH_SIZE):
+            for y in range(0, min(BATCH_SIZE, len(one_wsi_patches_names) - x-1)):
                 img = Image.open(os.path.join(TEMP_EXTRACTION_PATH_FOR_TEST_WSI, one_wsi_patches_names[x + y])).convert(
                     'RGB')
                 tmp_tensor[y] = to_tensor_transform(img)
@@ -133,20 +151,69 @@ def projectA_run_baseline():
             predictions = PT_Resnet50_KNN.knn_predict(forward)
             del forward
             del tmp_tensor
-            print("predic", predictions)
-            for y in range(0, BATCH_SIZE):
+            #print("predic", predictions)
+            for y in range(0, min(BATCH_SIZE, len(one_wsi_patches_names) - x-1)):
                 # patient_000_node_0.tif_xy_95924_90156_512x512.png
                 img_name = one_wsi_patches_names[x + y].split('_')
                 i = int(img_name[5]) // 512
                 j = int(img_name[6]) // 512
                 predi = int(predictions[y])
+                pred_heatmap_tensor[i][j]  =int(predictions[y])
                 if predi != 0:
+                    #print("ij,",i,j)
                     heatmap_tensor[predi-1][i][j] = 1
 
+        negative_as_negative = 0
+        itc_as_itc = 0
+        macro_as_macro = 0
+        negative_as_macro = 0
+        negative_as_itc = 0
+        itc_as_negative = 0
+        itc_as_macro = 0
+        macro_as_negative = 0
+        macro_as_itc = 0
+
+        for i in range(pred_heatmap_tensor.shape[0]):
+            for j in range(pred_heatmap_tensor.shape[1]):
+                patch_poly = Polygon(
+                    [Point(i*512, j*512), Point(i*512 + 512, j*512), Point(i*512 + 512, j*512 + 512), Point(i*512, j*512 + 512)])
+
+                patch_tag = extr.classify_metastasis_polygon(patch_poly)
+                if patch_tag == PatchTag.NEGATIVE:
+                    if pred_heatmap_tensor[i][j] == 0:
+                        negative_as_negative += 1
+                    elif pred_heatmap_tensor[i][j] == 1 or pred_heatmap_tensor[i][j] == 2:
+                        negative_as_macro += 1
+                    elif pred_heatmap_tensor[i][j] == 3:
+                        negative_as_itc += 1
+                elif patch_tag == PatchTag.MACRO or patch_tag == PatchTag.MICRO:
+                    if pred_heatmap_tensor[i][j] == 0:
+                        macro_as_negative += 1
+                    elif pred_heatmap_tensor[i][j] == 1 or pred_heatmap_tensor[i][j] == 2:
+                        macro_as_macro += 1
+                    elif pred_heatmap_tensor[i][j] == 3:
+                        macro_as_itc += 1
+                elif patch_tag == PatchTag.ITC:
+                    if pred_heatmap_tensor[i][j] == 0:
+                        itc_as_negative += 1
+                    elif pred_heatmap_tensor[i][j] == 1 or pred_heatmap_tensor[i][j] == 2:
+                        itc_as_macro += 1
+                    elif pred_heatmap_tensor[i][j] == 3:
+                        itc_as_itc += 1
+
+        logger.info(f"negative_as_negative = {negative_as_negative}")
+        logger.info(f"itc_as_itc = {itc_as_itc}")
+        logger.info(f"macro_as_macro = {macro_as_macro}")
+        logger.info(f"miss classify negative_as_macro = {negative_as_macro}")
+        logger.info(f"miss classify negative_as_itc = {negative_as_itc}")
+        logger.info(f"miss classify itc_as_negative = {itc_as_negative}")
+        logger.info(f"miss classify itc_as_macro = {itc_as_macro}")
+        logger.info(f"miss classify macro_as_negative = {macro_as_negative}")
+        logger.info(f"miss classify macro_as_itc = {macro_as_itc}")
 
         heatmap(heatmap_tensor)
 
-        # torch.save(heatmap_tensor, r"../heatmap.pt")
+        torch.save(heatmap_tensor, rf"../heatmap_patient_{extr.patient_ID}_node_{extr.patient_node_ID}.pt")
 
         # TODO: last 64-
 
