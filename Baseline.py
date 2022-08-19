@@ -82,28 +82,34 @@ def projectA_run_baseline():
         tuple((24, 1)),
         tuple((24, 2)),
     ]
+    # train on allset/[interesting_slide] then validate on [interesting_slide] then export results,heatmap
     for interesting_slide in interesting_slides:
         logger.info(f"using all dataset for train, then validating {interesting_slide}")
         logger.debug("init dataset & dataloader")
         Dataset.init3333_ds(validation_WSI_IDs=[interesting_slide], use_dummy_ds=False, only_train_set=True)
         logger.debug("done init dataset & dataloader")
-        train_n_batches = BASELINE_N_BATCHES_FOR_KNN
-        logger.debug(f"using {train_n_batches * BATCH_SIZE} patches for trainset")
-        resnt50_output_tensor = torch.zeros(size=(train_n_batches * BATCH_SIZE, 2048))
-        tags_tensor = torch.zeros(train_n_batches * BATCH_SIZE)
+        logger.debug(f"using {BASELINE_N_BATCHES_FOR_KNN * BATCH_SIZE} patches for trainset")
+
+        # train data for KNN : resnet50 forward
+        resnt50_output_tensor = torch.zeros(size=(BASELINE_N_BATCHES_FOR_KNN * BATCH_SIZE, 2048))
+        tags_tensor = torch.zeros(BASELINE_N_BATCHES_FOR_KNN * BATCH_SIZE)
         with torch.no_grad():
-            for i, xxx in zip(range(train_n_batches), Dataset.camelyon17_train_dl):
-                if i % 10 == 0:
-                    logger.debug(f"processing batch num {i} out of {train_n_batches}")
+            for i, xxx in zip(range(BASELINE_N_BATCHES_FOR_KNN), Dataset.camelyon17_train_dl):
+                if i % 10 == 0:  # print every 10
+                    logger.debug(f"processing batch num {i} out of {BASELINE_N_BATCHES_FOR_KNN}")
                 imges_tensort, tags = xxx[0], xxx[1]
                 resnt50_output_tensor[i * BATCH_SIZE: (i + 1) * BATCH_SIZE] = \
                     PT_Resnet50_KNN.pt_resnet50_model_cut.forward(imges_tensort).squeeze()
                 tags_tensor[i * BATCH_SIZE: (i + 1) * BATCH_SIZE] = tags
+
+        # init knn
         logger.debug(f"Init-ing KNN now, with k={KNN_K}")
         to_knn_train_fit = [resnt50_output_tensor,
                             tags_tensor]  # must stack , or change innnir implementation of init_Knn_model
         PT_Resnet50_KNN.init_Knn_model(train_dataset=to_knn_train_fit, n_neighbors=KNN_K)
-        print("KNN_K", KNN_K)
+
+
+
         TEMP_EXTRACTION_PATH_FOR_TEST_WSI = os.path.join('/', 'databases', 'hawahaitam', 'temp_dir', 'temp_dir')
         logger.debug(f"Done, now extracting full WSI to {TEMP_EXTRACTION_PATH_FOR_TEST_WSI}, clearing it first")
         try:
@@ -116,9 +122,9 @@ def projectA_run_baseline():
             logger.debug(f"error deleting dir, try to create new at {TEMP_EXTRACTION_PATH_FOR_TEST_WSI}")
             os.mkdir(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
             # if doesnt work then die
-        # try:
+        # extract [interesting_slide] without overlap
         logger.debug(f"start extract")
-        print(f"start extract")
+        print(f"start extract of slide {interesting_slide}")
         extr = PatchExtractor(
             wsi_path=form_wsi_path_by_ID(interesting_slide),
             patch_size=DEFAULT_PATCH_SIZE,
@@ -133,6 +139,7 @@ def projectA_run_baseline():
         extr.start_extract()
         logger.debug(f"done extract")
 
+        # build heatmap, resnet forward + knn predict
         heatmap_tensor = torch.zeros((3,(extr.wsi.dimensions[0] // 512)+1, (extr.wsi.dimensions[1] // 512)+1))
         pred_heatmap_tensor = torch.zeros(((extr.wsi.dimensions[0] // 512)+1, (extr.wsi.dimensions[1] // 512)+1))
         print("heatmap size",heatmap_tensor.shape)
@@ -158,10 +165,15 @@ def projectA_run_baseline():
                 i = int(img_name[5]) // 512
                 j = int(img_name[6]) // 512
                 predi = int(predictions[y])
-                pred_heatmap_tensor[i][j]  =int(predictions[y])
+                pred_heatmap_tensor[i][j] = int(predictions[y])
                 if predi != 0:
                     #print("ij,",i,j)
                     heatmap_tensor[predi-1][i][j] = 1
+                else:
+                    heatmap_tensor[0][i][j] = 1
+                    heatmap_tensor[1][i][j] = 1
+                    heatmap_tensor[2][i][j] = 1
+
 
         negative_as_negative = 0
         itc_as_itc = 0
@@ -211,23 +223,22 @@ def projectA_run_baseline():
         logger.info(f"miss classify macro_as_negative = {macro_as_negative}")
         logger.info(f"miss classify macro_as_itc = {macro_as_itc}")
 
-        heatmap(heatmap_tensor)
-
+        heatmap_pil_img = heatmap(heatmap_tensor,show=False)
+        heatmap_pil_img.save(rf"../heatmap_patient_{extr.patient_ID}_node_{extr.patient_node_ID}_img.png")
         torch.save(heatmap_tensor, rf"../heatmap_patient_{extr.patient_ID}_node_{extr.patient_node_ID}.pt")
 
-        # TODO: last 64-
 
 
-def projectA_run_baseline_for_patches_only(validation_WSI_IDs, train_n_batches, test_n_batches, use_dummy_ds=False):
+def projectA_run_baseline_for_patches_only(validation_WSI_IDs, BASELINE_N_BATCHES_FOR_KNN, test_n_batches, use_dummy_ds=False):
     Dataset.init3333_ds(validation_WSI_IDs, use_dummy_ds=use_dummy_ds)
     PT_Resnet50_KNN.init_pre_trained_resnet50_model()
 
-    resnt50_output_tensor = torch.zeros(size=(train_n_batches * BATCH_SIZE, 2048))
-    tags_tensor = torch.zeros(train_n_batches * BATCH_SIZE)
+    resnt50_output_tensor = torch.zeros(size=(BASELINE_N_BATCHES_FOR_KNN * BATCH_SIZE, 2048))
+    tags_tensor = torch.zeros(BASELINE_N_BATCHES_FOR_KNN * BATCH_SIZE)
     print("initing samples for knn")
     with torch.no_grad():
-        for i, xxx in zip(range(train_n_batches), Dataset.camelyon17_train_dl):
-            print(f"processing train batch num {i} out of {train_n_batches}")
+        for i, xxx in zip(range(BASELINE_N_BATCHES_FOR_KNN), Dataset.camelyon17_train_dl):
+            print(f"processing train batch num {i} out of {BASELINE_N_BATCHES_FOR_KNN}")
             imges_tensort, tags = xxx[0], xxx[1]
             resnt50_output_tensor[i * BATCH_SIZE: (i + 1) * BATCH_SIZE] = \
                 PT_Resnet50_KNN.pt_resnet50_model_cut.forward(imges_tensort).squeeze()

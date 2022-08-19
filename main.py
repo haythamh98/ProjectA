@@ -46,8 +46,10 @@ if __name__ == '__main__':
 
     # iterate_camelyon17_files_extract_patches(draw_contours_only=False)
     # knn_sanity_check()
-    projectA_run_baseline()
 
+    projectA_run_baseline()
+    # from utils.Folder_spliter import split_folder_to_subfolders
+    # split_folder_to_subfolders(NEGATIVE_OUTPUT_DIR)
 
 
     #itera = iter(ds)

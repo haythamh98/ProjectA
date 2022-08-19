@@ -31,7 +31,7 @@ if not os.path.isdir(DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH):
         raise
 
 
-# hyper-parameters
+
 # all params should be center specific, So must use list of n_centers size, one for each center
 DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE = [100, 100, 100, 100, 100, 100]
 IMG_CONTOUR_BLUR_KERNEL_SIZE = [(11, 11), (15, 15), (9, 9), (11, 11), (11, 11), (11, 11)]  # TODO
@@ -89,9 +89,8 @@ BAD_FILES_SKIP_LIST = [
     "patient_036_node_1",
     "patient_036_node_2",
     "patient_039_node_1",
-    
-    
 ]
+
 def check_in_skip_list(filename):
     for name in BAD_FILES_SKIP_LIST:
         if name in filename:

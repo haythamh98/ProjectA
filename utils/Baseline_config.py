@@ -1,6 +1,6 @@
 from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import *
 KNN_K = 7
-BASELINE_N_BATCHES_FOR_KNN = 100
+BASELINE_N_BATCHES_FOR_KNN = 200
 
 
 
