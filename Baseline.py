@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from PIL.Image import Image
 from shapely.geometry import Polygon, Point
-
+import shutil
 from utils.Baseline_config import *
 from Models import PT_Resnet50_KNN
 from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import *
@@ -21,7 +21,6 @@ from datetime import datetime
 from WSI_Tools.PatchExtractor_Tools.PatchExtractor import PatchTag, PatchExtractor
 from WSI_Tools.PatchExtractor_Tools.wsi_utils import form_wsi_path_by_ID
 from utils.Baseline_config import *
-from utils.Baseline_config import TEMP_EXTRACTION_PATH_FOR_TEST_WSI
 
 ############# logger
 date = datetime.now().strftime("%Y_%m_%d_%I_%M_%S_%p")
@@ -67,23 +66,9 @@ def projectA_run_baseline():
     PT_Resnet50_KNN.init_pre_trained_resnet50_model()
     logger.debug("hello debug mode")
 
-    interesting_slides = [
-        tuple((9, 1)),
-        tuple((10, 4)),
-        tuple((12, 0)),
-        tuple((15, 1)),
-        tuple((15, 2)),
-        tuple((16, 1)),
-        tuple((17, 1)),
-        tuple((17, 4)),
-        tuple((20, 2)),
-        tuple((20, 4)),
-        tuple((22, 4)),
-        tuple((24, 1)),
-        tuple((24, 2)),
-    ]
+
     # train on allset/[interesting_slide] then validate on [interesting_slide] then export results,heatmap
-    for interesting_slide in interesting_slides:
+    for interesting_slide in INTERESTING_WSI_IDS[13:]:  # TODO:::::
         logger.info(f"using all dataset for train, then validating {interesting_slide}")
         logger.debug("init dataset & dataloader")
         Dataset.init3333_ds(validation_WSI_IDs=[interesting_slide], use_dummy_ds=False, only_train_set=True)
@@ -108,12 +93,9 @@ def projectA_run_baseline():
                             tags_tensor]  # must stack , or change innnir implementation of init_Knn_model
         PT_Resnet50_KNN.init_Knn_model(train_dataset=to_knn_train_fit, n_neighbors=KNN_K)
 
-
-
         TEMP_EXTRACTION_PATH_FOR_TEST_WSI = os.path.join('/', 'databases', 'hawahaitam', 'temp_dir', 'temp_dir')
         logger.debug(f"Done, now extracting full WSI to {TEMP_EXTRACTION_PATH_FOR_TEST_WSI}, clearing it first")
         try:
-            import shutil
             shutil.rmtree(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
             os.mkdir(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
         except:
@@ -140,26 +122,25 @@ def projectA_run_baseline():
         logger.debug(f"done extract")
 
         # build heatmap, resnet forward + knn predict
-        heatmap_tensor = torch.zeros((3,(extr.wsi.dimensions[0] // 512)+1, (extr.wsi.dimensions[1] // 512)+1))
-        pred_heatmap_tensor = torch.zeros(((extr.wsi.dimensions[0] // 512)+1, (extr.wsi.dimensions[1] // 512)+1))
-        print("heatmap size",heatmap_tensor.shape)
+        heatmap_tensor = torch.zeros((3, (extr.wsi.dimensions[0] // 512) + 1, (extr.wsi.dimensions[1] // 512) + 1))
+        pred_heatmap_tensor = torch.zeros(((extr.wsi.dimensions[0] // 512) + 1, (extr.wsi.dimensions[1] // 512) + 1))
         one_wsi_patches_names = os.listdir(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
         to_tensor_transform = transforms.ToTensor()
 
         for x in range(0, len(one_wsi_patches_names), BATCH_SIZE):
-            print(f"in batch num {x} out of {len(one_wsi_patches_names)} ")
+            print(f"in batch num {x//BATCH_SIZE} out of {len(one_wsi_patches_names)//BATCH_SIZE} ")
             tmp_tensor = torch.zeros([64, 3, 512, 512])
-            for y in range(0, min(BATCH_SIZE, len(one_wsi_patches_names) - x-1)):
+            for y in range(0, min(BATCH_SIZE, len(one_wsi_patches_names) - x - 1)):
                 img = Image.open(os.path.join(TEMP_EXTRACTION_PATH_FOR_TEST_WSI, one_wsi_patches_names[x + y])).convert(
                     'RGB')
                 tmp_tensor[y] = to_tensor_transform(img)
                 img.close()
             forward = PT_Resnet50_KNN.pt_resnet50_model_cut(tmp_tensor).squeeze()
             predictions = PT_Resnet50_KNN.knn_predict(forward)
-            del forward
+            del forward  # TODO: CHECK HIGH MEMORY USAGE
             del tmp_tensor
-            #print("predic", predictions)
-            for y in range(0, min(BATCH_SIZE, len(one_wsi_patches_names) - x-1)):
+            # print("predic", predictions)
+            for y in range(0, min(BATCH_SIZE, len(one_wsi_patches_names) - x - 1)):
                 # patient_000_node_0.tif_xy_95924_90156_512x512.png
                 img_name = one_wsi_patches_names[x + y].split('_')
                 i = int(img_name[5]) // 512
@@ -167,14 +148,17 @@ def projectA_run_baseline():
                 predi = int(predictions[y])
                 pred_heatmap_tensor[i][j] = int(predictions[y])
                 if predi != 0:
-                    #print("ij,",i,j)
-                    heatmap_tensor[predi-1][i][j] = 1
+                    # print("ij,",i,j)
+                    heatmap_tensor[predi - 1][i][j] = 1
+                    # RED: MACRO/MICRO
+                    # BLUE: ITC
                 else:
+                    # WHITE: NEGATIVE
                     heatmap_tensor[0][i][j] = 1
                     heatmap_tensor[1][i][j] = 1
                     heatmap_tensor[2][i][j] = 1
 
-
+        # evaluate results
         negative_as_negative = 0
         itc_as_itc = 0
         macro_as_macro = 0
@@ -188,7 +172,8 @@ def projectA_run_baseline():
         for i in range(pred_heatmap_tensor.shape[0]):
             for j in range(pred_heatmap_tensor.shape[1]):
                 patch_poly = Polygon(
-                    [Point(i*512, j*512), Point(i*512 + 512, j*512), Point(i*512 + 512, j*512 + 512), Point(i*512, j*512 + 512)])
+                    [Point(i * 512, j * 512), Point(i * 512 + 512, j * 512), Point(i * 512 + 512, j * 512 + 512),
+                     Point(i * 512, j * 512 + 512)])
 
                 patch_tag = extr.classify_metastasis_polygon(patch_poly)
                 if patch_tag == PatchTag.NEGATIVE:
@@ -223,13 +208,13 @@ def projectA_run_baseline():
         logger.info(f"miss classify macro_as_negative = {macro_as_negative}")
         logger.info(f"miss classify macro_as_itc = {macro_as_itc}")
 
-        heatmap_pil_img = heatmap(heatmap_tensor,show=False)
+        heatmap_pil_img = heatmap(heatmap_tensor, show=False)
         heatmap_pil_img.save(rf"../heatmap_patient_{extr.patient_ID}_node_{extr.patient_node_ID}_img.png")
         torch.save(heatmap_tensor, rf"../heatmap_patient_{extr.patient_ID}_node_{extr.patient_node_ID}.pt")
 
 
-
-def projectA_run_baseline_for_patches_only(validation_WSI_IDs, BASELINE_N_BATCHES_FOR_KNN, test_n_batches, use_dummy_ds=False):
+def projectA_run_baseline_for_patches_only(validation_WSI_IDs, BASELINE_N_BATCHES_FOR_KNN, test_n_batches,
+                                           use_dummy_ds=False):
     Dataset.init3333_ds(validation_WSI_IDs, use_dummy_ds=use_dummy_ds)
     PT_Resnet50_KNN.init_pre_trained_resnet50_model()
 
