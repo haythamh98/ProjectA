@@ -33,24 +33,13 @@ def big_file_Walkaround():
 
 if __name__ == '__main__':
     print("Hi")
-    # Rose: some functions that will help you
-    # iterate_camelyon17_files_extract_patches(draw_contours_only=True) in PatchExtractor
-    # draw_random_samples() in Dataset
-    # knn_sanity_check() in PT_Resnet50_KNN
 
-    # TODO:
-    # 1) fix extraction parameters for at least 2 centers (center 0 is done)
-    # 2) run contours extraction to check all images , if bad image add wsi name to skiplist as in example, in patchExtractor_config file
-    # 3) run extract slides (you might need to delete macro file, TODO: make sure micro has patches)
-    # 4) you might need to use GPU for faster processing
 
-    # iterate_camelyon17_files_extract_patches(draw_contours_only=False)
-    # knn_sanity_check()
 
-    projectA_run_baseline()
-    # from utils.Folder_spliter import split_folder_to_subfolders
-    # split_folder_to_subfolders(NEGATIVE_OUTPUT_DIR)
 
+    import Final_solution
+
+    Final_solution.init_model()
 
     #itera = iter(ds)
     #lll = list([next(itera),next(itera),next(itera)])

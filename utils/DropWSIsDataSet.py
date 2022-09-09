@@ -43,7 +43,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
         worker_info = torch.utils.data.get_worker_info()
         # if worker_info is None:  # single-process data loading, return the full iterator
         if True:
-            print("one worker mode")
+            # print("one worker mode")
             return iter(
                 self.Camelyon17Iterator(root=self.root,
                                         WSI_skip_list=self.validation_WSI_IDs,
@@ -53,8 +53,8 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                                         )
             )
         else:  # in a worker process
-            # TODO
             pass
+            # TODO
         raise "NotImplementedError"
 
     # TODO: later: extend for multi workers
@@ -82,7 +82,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
             self.other_tags_files_names.remove('NEGATIVE')
             to_remove = []  # remove emty dirs
             for dir_name in self.other_tags_files_names:
-                if len(os.listdir(os.path.join(self.root, dir_name))) < 5:  # TODO: make default threshold parameter
+                if len(os.listdir(os.path.join(self.root, dir_name))) < 1:  # TODO: make default threshold parameter
                     to_remove.append(dir_name)
             for tag_to_remove in to_remove:
                 self.other_tags_files_names.remove(tag_to_remove)
@@ -134,7 +134,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                     # print(img_name)
                     patient_ID = int(img_name[1])
                     # print("patient_ID",patient_ID)
-                    node_ID = int(img_name[3][:-4])  #
+                    node_ID = int(img_name[3][:-4])
                     # print("pil_img_name,",pil_img_name)
                     pil_img_path = os.path.join(os.path.join(negative_sub_dir_path, pil_img_name))
                     # print("pil_img_path",pil_img_path)
@@ -179,78 +179,3 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                     img = self.transform(img)
 
                 return img, class_to_idx(tag)
-
-
-"""
-This Class is deprecated 
-DatasetFolder -> uses map-style dataset, its not practicle for our dataset 
-
-
-class DropWSIsDataSet(DatasetFolder):
-
-
-    def __init__(
-            self,
-            root: str = PYTORCH_IMAGE_DATASET_PATH,
-            transform: Optional[Callable] = None,
-            target_transform: Optional[Callable] = None,
-            loader: Callable[[str], Any] = default_loader,
-            validation_WSI_IDs = None, ##### array of tuples (patient_ID, node_ID) for validation
-            is_validation = False
-    ):
-        self.validation_WSI_IDs = validation_WSI_IDs
-        self.is_validation = is_validation
-
-        self.is_valid_function = lambda img_path: self.is_valid(img_path,self.is_validation,validation_WSI_IDs)
-
-        super().__init__(
-            root,
-            loader,
-            None,
-            transform=transform,
-            target_transform=target_transform,
-            is_valid_file=self.is_valid_function,
-        )
-        self.imgs = self.samples
-
-    @staticmethod
-    def is_valid(img_path:str,is_validation_set:bool,validation_WSI_IDs) -> bool:
-        assert len(validation_WSI_IDs) > 0
-        # eg. patient_044_node_4.tif_xy_38555_14340_512x512.png
-        img_name = os.path.split(img_path)[1].split('_')
-        # print(img_name)
-        patient_ID = int(img_name[1])
-        # print("patient_ID",patient_ID)
-        node_ID = int(img_name[3][:-4]) # TODO: fix this error, name should not include .tif after node ID
-        if is_validation_set:
-            for tuple_patient_node in validation_WSI_IDs:
-                # print(tuple_patient_node)
-                patient, node = tuple_patient_node
-                # print(patient, node)
-                if patient_ID ==  patient and node_ID == node:
-                    # print("found" , patient, node)
-                    try:
-                        img = Image.open(img_path)
-                        if img.size[0] > 0 and img.size[1] > 0:
-                            # print(f"image {img_path} is validation")
-                            return True
-                    except:
-                        print(f"image {img_path} is corrupted")
-                        return False
-            return False
-        else:
-            for tuple_patient_node in validation_WSI_IDs:
-                patient, node = tuple_patient_node
-                if patient_ID == patient and node_ID == node:
-                    return False
-            try:
-                img = Image.open(img_path)
-                if img.size[0] > 0 and img.size[1] > 0:
-                    print(f"image {img_path} is train")
-                    return True
-            except:
-                print(f"image {img_path} is corrupted")
-                return False
-        raise "should not reach here"
-
-"""

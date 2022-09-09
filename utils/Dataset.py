@@ -11,15 +11,51 @@ camelyon17_train_dl = None
 camelyon17_validation_dl = None
 
 
-
-def init3333_ds(validation_WSI_IDs,use_dummy_ds = False,only_train_set=False):
-    global camelyon17_train_ds,camelyon17_train_dl,camelyon17_validation_ds,camelyon17_validation_dl
+def init_ds_final_solution(validation_WSI_IDs, use_dummy_ds=False, only_train_set=False,
+                           negative_patches_ratio_train=0.7, negative_patches_ratio_validation=0.7):
+    global camelyon17_train_ds, camelyon17_train_dl, camelyon17_validation_ds, camelyon17_validation_dl
     # Dataset
     camelyon17_train_ds = Camelyon17IterableDataset(
         image_classes_root_path=DATASET_DIR if not use_dummy_ds else DUMMY_DATASET_DIR,
         transform=ds_transforms,
         # target_transform=None,
-        negative_patches_ratio = 0.8,
+        negative_patches_ratio=negative_patches_ratio_train,
+        validation_WSI_IDs=validation_WSI_IDs,
+        is_validation=False,
+    )
+    camelyon17_train_dl = torch.utils.data.DataLoader(
+        dataset=camelyon17_train_ds,
+        batch_size=BATCH_SIZE,
+        num_workers=LOADER_N_WORKERS,  # TODO: num_workers not supported yet or it is....
+    )
+    if only_train_set:
+        return camelyon17_train_ds, camelyon17_train_dl, None, None
+
+    camelyon17_validation_ds = Camelyon17IterableDataset(
+        image_classes_root_path=DATASET_DIR if not use_dummy_ds else DUMMY_DATASET_DIR,
+        transform=None,  # in validation we dont use augmentation
+        # target_transform=None,
+        negative_patches_ratio=negative_patches_ratio_validation,
+        validation_WSI_IDs=validation_WSI_IDs,
+        is_validation=True,
+    )
+    camelyon17_validation_dl = torch.utils.data.DataLoader(
+        dataset=camelyon17_validation_ds,
+        batch_size=BATCH_SIZE,
+        num_workers=LOADER_N_WORKERS,  # TODO: num_workers not supported yet or it is....
+    )
+    print("Dataset & dataloaders init done")
+    return camelyon17_train_ds, camelyon17_train_dl, camelyon17_validation_ds, camelyon17_validation_dl
+
+
+def init3333_ds(validation_WSI_IDs, use_dummy_ds=False, only_train_set=False):
+    global camelyon17_train_ds, camelyon17_train_dl, camelyon17_validation_ds, camelyon17_validation_dl
+    # Dataset
+    camelyon17_train_ds = Camelyon17IterableDataset(
+        image_classes_root_path=DATASET_DIR if not use_dummy_ds else DUMMY_DATASET_DIR,
+        transform=ds_transforms,
+        # target_transform=None,
+        negative_patches_ratio=0.8,
         validation_WSI_IDs=validation_WSI_IDs,
         is_validation=False,
     )
@@ -34,7 +70,7 @@ def init3333_ds(validation_WSI_IDs,use_dummy_ds = False,only_train_set=False):
         image_classes_root_path=DATASET_DIR if not use_dummy_ds else DUMMY_DATASET_DIR,
         transform=ds_transforms,
         # target_transform=None,
-        negative_patches_ratio = 0.6,
+        negative_patches_ratio=0.6,
         validation_WSI_IDs=validation_WSI_IDs,
         is_validation=True,
     )
@@ -46,8 +82,8 @@ def init3333_ds(validation_WSI_IDs,use_dummy_ds = False,only_train_set=False):
     print("Dataset & dataloaders init done")
 
 
-def init2222_ds(validation_WSI_IDs,use_dummy_ds = False):
-    global camelyon17_train_ds,camelyon17_train_dl
+def init2222_ds(validation_WSI_IDs, use_dummy_ds=False):
+    global camelyon17_train_ds, camelyon17_train_dl
     # Dataset
     print("init camelyon17_train_ds")
     camelyon17_train_ds = DropWSIsDataSet(
@@ -66,8 +102,8 @@ def init2222_ds(validation_WSI_IDs,use_dummy_ds = False):
     )
 
 
-def init2222_test_ds(ds_path, use_dummy_ds = False):
-    global  camelyon17_validation_ds, camelyon17_validation_dl
+def init2222_test_ds(ds_path, use_dummy_ds=False):
+    global camelyon17_validation_ds, camelyon17_validation_dl
     print("init camelyon17_validation_ds")
     camelyon17_validation_ds = DropWSIsDataSet(
         root=ds_path if not use_dummy_ds else DUMMY_DATASET_DIR,
@@ -89,11 +125,10 @@ def init2222_test_ds(ds_path, use_dummy_ds = False):
     # TODO: use class_to_idx to map between tag number and tag name (subFolder name)
 
 
-def is_valid_pil_image(image_path : str):
-
+def is_valid_pil_image(image_path: str):
     try:
-        img =  Image.open(image_path)
-        if img.size[0] > 0 and img.size[1] > 0 :
+        img = Image.open(image_path)
+        if img.size[0] > 0 and img.size[1] > 0:
             return True
     except:
         print(f"image {image_path} is corrupted")
@@ -101,9 +136,8 @@ def is_valid_pil_image(image_path : str):
     return False
 
 
-
-def init_ds_dl(sampler = None):
-    global camelyon17_ds,camelyon17_dl
+def init_ds_dl(sampler=None):
+    global camelyon17_ds, camelyon17_dl
     # Dataset
     camelyon17_ds = torchvision.datasets.ImageFolder(
         root=DATASET_DIR,
@@ -127,23 +161,19 @@ def init_ds_dl(sampler = None):
     # TODO: use class_to_idx to map between tag number and tag name (subFolder name)
 
 
-
-
-
 def draw_random_samples(n: int = 5):
     # not sure how to plot when using remote :(
     print("sampling from camelyon17_train_dl")
-    for i,Xy in enumerate(camelyon17_train_dl):
+    for i, Xy in enumerate(camelyon17_train_dl):
         X, y = Xy[0], Xy[1]  # X,y shape[0] == BATCH_SIZE
         print(f'Batch #{i} Size={y.shape[0]}')
         print(f'Tags {y}')
         if i >= n:
             break
     print("sampling from camelyon17_validation_dl")
-    for i,Xy in enumerate(camelyon17_validation_dl):
+    for i, Xy in enumerate(camelyon17_validation_dl):
         X, y = Xy[0], Xy[1]  # X,y shape[0] == BATCH_SIZE
         print(f'Batch #{i} Size={y.shape[0]}')
         print(f'Tags {y}')
         if i >= n:
             break
-
