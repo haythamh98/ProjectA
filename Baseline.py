@@ -26,12 +26,14 @@ from utils.Baseline_config import *
 date = datetime.now().strftime("%Y_%m_%d_%I_%M_%S_%p")
 
 logger = logging.getLogger(__name__)
-
-logging.basicConfig(filename=rf"../logging/projectA_baseline_{date}",
-                    filemode='a',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',
-                    level=logging.DEBUG)
+try:
+    logging.basicConfig(filename=rf"../logging/projectA_baseline_{date}",
+                        filemode='a',
+                        format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                        datefmt='%H:%M:%S',
+                        level=logging.DEBUG)
+except:
+    pass
 
 # logging.basicConfig(stream=sys.stdout,level=logging.DEBUG)
 pil_logger = logging.getLogger('PIL')

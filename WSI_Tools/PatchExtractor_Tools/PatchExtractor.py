@@ -280,7 +280,7 @@ def iterate_camelyon17_files_extract_patches(draw_contours_only=False):
 
 
 
-from wsi_utils import form_wsi_path_by_ID
+from WSI_Tools.PatchExtractor_Tools.wsi_utils import form_wsi_path_by_ID
 from utils.Baseline_config import INTERESTING_WSI_IDS
 def iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=False):
     for file_idx in INTERESTING_WSI_IDS: # TODO: get list from rose
