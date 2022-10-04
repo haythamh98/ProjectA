@@ -35,7 +35,7 @@ if __name__ == '__main__':
     print("Hi")
 
     from WSI_Tools.PatchExtractor_Tools.PatchExtractor import *
-    iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=True)
+    iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=False)
 
 
     #import Final_solution

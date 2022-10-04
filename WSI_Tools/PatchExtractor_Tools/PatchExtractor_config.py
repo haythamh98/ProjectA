@@ -46,8 +46,8 @@ tag_csv_file_path = os.path.join(LOCAL_DATABASE, 'Tag', 'stage_labels.csv')
 
 # extractor parameters
 DEFAULT_EXTRACTION_LEVEL = 0  # anything else is not implemented (for now)
-DEFAULT_PATCH_SIZE = (512, 512)
-DEFAULT_PATCH_OVERLAP = (128, 128)  # X,Y
+DEFAULT_PATCH_SIZE = (256, 256)
+DEFAULT_PATCH_OVERLAP = (64, 64)  # X,Y
 MAX_EXTRACTION_THREADS = 8
 THREAD_POOLING_TIME_SEC = 10
 
@@ -56,8 +56,11 @@ PYTORCH_IMAGE_DATASET_PATH =  os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset')
 DUMMY_PYTORCH_IMAGE_DATASET_PATH =  os.path.join(LOCAL_DATABASE, 'Pytorch_Dataset_dummy')
 NEGATIVE_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'NEGATIVE')
 MACRO_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'MACRO')
-MICRO_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'MICRO')
-ITC_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'ITC')
+MICRO_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'MACRO')
+ITC_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'MACRO')
+# TODO
+# MICRO_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'MICRO')
+# ITC_OUTPUT_DIR = os.path.join(PYTORCH_IMAGE_DATASET_PATH, 'ITC')
 
 # TODO: rose look at the extracted contours images first, then manually disable bad slides by adding their name here
 # you can find them at DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH, remember to pass the right variable to
@@ -97,3 +100,12 @@ def check_in_skip_list(filename):
         if name in filename:
             return True
     return False
+
+annotated_wsi = [(4, 4), (9, 1), (10, 4), (12, 0), (15, 1), (15, 2), (16, 1), (17, 1), (17, 2), (17, 4), (20, 2),
+                 (20, 4), (21, 3), (22, 4), (24, 1), (24, 2), (34, 3), (36, 3), (38, 2), (39, 1), (40, 2), (41, 0),
+                 (42, 3), (44, 4), (45, 1), (46, 3), (46, 4), (48, 1), (51, 2), (52, 1), (60, 3), (61, 4), (62, 2),
+                 (64, 0), (66, 2), (67, 4), (68, 1), (72, 0), (73, 1), (75, 4), (80, 1), (81, 4), (86, 0), (86, 4),
+                 (87, 0), (88, 1), (89, 3), (92, 1), (96, 0), (99, 4)]
+extra_negative_slides = [(0,0),(3,0),(22,2),(30,1),(38,3),(45,2),(51,3),(64,1),(77,0),(84,4),(93,0)]
+
+interesting_wsis = annotated_wsi + extra_negative_slides

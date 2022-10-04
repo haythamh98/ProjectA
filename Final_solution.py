@@ -1,3 +1,5 @@
+import random
+
 import torch
 import torch.nn as nn
 from utils import Dataset
@@ -23,12 +25,18 @@ def init_final_model():
     print("RESTENT18!*" , list(model.children())[:])
     model = model.to(device)
 
+def get_random_validation_idx():
+    from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import interesting_wsis
+    size_ = len(interesting_wsis)
+    return random.choices(interesting_wsis, weights=None, cum_weights=None, k=int(0.20*size_)+1)
+
+
 def run_final_train_model():
     global model
     if model is None:
         init_final_model()
     camelyon17_train_ds, camelyon17_train_dl, camelyon17_validation_ds, camelyon17_validation_dl = Dataset.init_ds_final_solution(
-        validation_WSI_IDs=[],
+        validation_WSI_IDs=get_random_validation_idx(),
         use_dummy_ds=True,
         only_train_set=True,
         negative_patches_ratio_train=0.7,
@@ -106,11 +114,7 @@ def run_final_train_model():
                 break  # terminate training
 
 
-
-
-
-
     # change validation and train
-    new_validation_set = []
+    new_validation_set = get_random_validation_idx()
     camelyon17_train_ds.validation_WSI_IDs = new_validation_set
     camelyon17_validation_ds.validation_WSI_IDs = new_validation_set

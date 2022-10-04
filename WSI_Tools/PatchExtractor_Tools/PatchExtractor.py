@@ -194,8 +194,8 @@ class PatchExtractor:
     def classify_metastasis_polygon(self, polygon: Polygon):
         for contour in self.contours:
             if polygon.intersects(contour):
-                if self.wsi_tag == 'itc':
-                    return PatchTag.ITC
+                # if self.wsi_tag == 'itc': only in baseline
+                #    return PatchTag.ITC
                 return self.tumor_classifier.get_polygon_metastasis(polygon)
         return PatchTag.NONE
 
@@ -285,10 +285,9 @@ def iterate_camelyon17_files_extract_patches(draw_contours_only=False):
 
 from WSI_Tools.PatchExtractor_Tools.wsi_utils import form_wsi_path_by_ID
 from utils.Baseline_config import INTERESTING_WSI_IDS
-rose = [(4, 4), (9, 1), (10, 4), (12, 0), (15, 1), (15, 2), (16, 1), (17, 1), (17, 2), (17, 4), (20, 2), (20, 4), (21, 3), (22, 4), (24, 1), (24, 2), (34, 3), (36, 3), (38, 2), (39, 1), (40, 2), (41, 0), (42, 3), (44, 4), (45, 1), (46, 3), (46, 4), (48, 1), (51, 2), (52, 1), (60, 3), (61, 4), (62, 2), (64, 0), (66, 2), (67, 4), (68, 1), (72, 0), (73, 1), (75, 4), (80, 1), (81, 4), (86, 0), (86, 4), (87, 0), (88, 1), (89, 3), (92, 1), (96, 0), (99, 4)]
-extra_negative_slides = [(0,0),(3,0),(22,2),(30,1),(38,3),(45,2),(51,3),(64,1),(77,0),(84,4),(93,0)]
+
 def iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=False):
-    for file_idx in rose+extra_negative_slides: # TODO: get list from rose
+    for file_idx in interesting_wsis:
         filepath = form_wsi_path_by_ID(file_idx)
         if check_in_skip_list(os.path.split(filepath)[-1]):
             continue  # skip the file
