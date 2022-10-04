@@ -280,4 +280,19 @@ def iterate_camelyon17_files_extract_patches(draw_contours_only=False):
 
 
 
+from wsi_utils import form_wsi_path_by_ID
+from utils.Baseline_config import INTERESTING_WSI_IDS
+def iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=False):
+    for file_idx in INTERESTING_WSI_IDS: # TODO: get list from rose
+        filepath = form_wsi_path_by_ID(file_idx)
+        if check_in_skip_list(os.path.split(filepath)[-1]):
+            continue  # skip the file
+        print("in " + os.path.split(filepath)[-1])
+        try:
+            ext = PatchExtractor(filepath)
+            if not draw_contours_only:
+                ext.start_extract()
+        except:
+            print(f"Error when extracting from {filepath}, To debug remove try except block and run, Do this only if you know what you are doing")
+
 

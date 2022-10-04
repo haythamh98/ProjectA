@@ -4,7 +4,7 @@ def n_to_3digit_str(n):
     return '0' * (3-len(str(n))) + str(n)
 
 def form_wsi_path_by_ID(WSI_ID):
-    camelyon17_dir = os.path.join(NETWORK_DATABASE,'Camelyon17','training')
+    camelyon17_train_dir = os.path.join(NETWORK_DATABASE,'Camelyon17','training')
     center_ID = -1
     if WSI_ID[0] in range(0,20):
         center_ID = 0
@@ -17,4 +17,4 @@ def form_wsi_path_by_ID(WSI_ID):
     elif WSI_ID[0] in range(80,100):
         center_ID = 4
     # patient_005_node_0.tif
-    return os.path.join(camelyon17_dir,f'center_{center_ID}',f'patient_{n_to_3digit_str(WSI_ID[0])}',f'patient_{n_to_3digit_str(WSI_ID[0])}_node_{WSI_ID[1]}.tif')
+    return os.path.join(camelyon17_train_dir,f'center_{center_ID}',f'patient_{n_to_3digit_str(WSI_ID[0])}',f'patient_{n_to_3digit_str(WSI_ID[0])}_node_{WSI_ID[1]}.tif')

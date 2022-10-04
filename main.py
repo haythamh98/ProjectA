@@ -34,12 +34,12 @@ def big_file_Walkaround():
 if __name__ == '__main__':
     print("Hi")
 
+    from WSI_Tools.PatchExtractor_Tools.PatchExtractor import *
+    iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=True)
 
 
-
-    import Final_solution
-
-    Final_solution.run_final_train_model()
+    #import Final_solution
+    #Final_solution.run_final_train_model()
 
     #itera = iter(ds)
     #lll = list([next(itera),next(itera),next(itera)])
