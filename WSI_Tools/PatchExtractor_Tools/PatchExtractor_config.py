@@ -33,10 +33,10 @@ if not os.path.isdir(DOWN_SCALED_IMAGE_ANNOTATED_CONTOURS_OUTPUT_DIR_PATH):
 
 
 # all params should be center specific, So must use list of n_centers size, one for each center
-DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE = [100, 100, 100, 100, 100, 100]
-IMG_CONTOUR_BLUR_KERNEL_SIZE = [(11, 11), (15, 15), (7, 7), (11, 11), (11, 11), (11, 11)]  # TODO
-CV2_THRESH_FOR_EDGES = [100, 120, 150, 100, 100, 100]  # TODO
-IMG_CONTOUR_MIN_NUM_POINTS = [50, 55, 50, 50, 50, 50]
+DOWN_SAMPLE_RATE_FOR_GENERATING_CONTOUR_IMAGE = [100, 100, 100, 100, 100]
+IMG_CONTOUR_BLUR_KERNEL_SIZE = [(11, 11), (15, 15), (7, 7), (11, 11), (17, 17)]  # TODO
+CV2_THRESH_FOR_EDGES = [100, 120, 150, 100, 30]  # TODO
+IMG_CONTOUR_MIN_NUM_POINTS = [50, 55, 50, 50, 50]
 BLACK_COLOR_THRESH_TO_IGNORE = [210, 220, 254, 210, 210]  # TODO
 DROP_WSI_SCANNER_NOISE_LINE_THRESH = [8, 6, 8, 8, 8]#####
 
@@ -89,6 +89,7 @@ BAD_FILES_SKIP_LIST = [
     "patient_036_node_1",
     "patient_036_node_2",
     "patient_039_node_1",
+    "patient_099_node_4",
 ]
 
 def check_in_skip_list(filename):
