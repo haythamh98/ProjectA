@@ -149,7 +149,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                             # bad image
                             continue
                     except:
-                        print(f"image {pil_img_path} is corrupted")
+                        # print(f"image {pil_img_path} is corrupted")
                         continue
 
                     tag = 'NEGATIVE'
@@ -172,7 +172,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                             # bad image
                             continue
                     except:
-                        print(f"image {pil_img_path} is corrupted")
+                        # print(f"image {pil_img_path} is corrupted")
                         continue
                     tag = tag_dir_name
 

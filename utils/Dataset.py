@@ -134,7 +134,8 @@ def is_valid_pil_image(image_path: str):
         if img.size[0] > 0 and img.size[1] > 0:
             return True
     except:
-        print(f"image {image_path} is corrupted")
+        pass
+        # print(f"image {image_path} is corrupted")
 
     return False
 
