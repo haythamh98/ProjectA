@@ -39,7 +39,7 @@ if __name__ == '__main__':
 
     import Final_solution
 
-    Final_solution.init_model()
+    Final_solution.run_final_train_model()
 
     #itera = iter(ds)
     #lll = list([next(itera),next(itera),next(itera)])

@@ -27,12 +27,13 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
     def __init__(self,
                  image_classes_root_path: str = PYTORCH_IMAGE_DATASET_PATH,
                  transform: Optional[Callable] = None,
-                 # target_transform: Optional[Callable] = None, # might be needed for now
+                 target_transform: Optional[Callable] = None, # might be needed for now
                  negative_patches_ratio: float = 0.7,  # TODO: move to parameters
                  validation_WSI_IDs=Optional[Iterable],  ##### array of tuples (patient_ID, node_ID) for validation
                  is_validation=False
                  ):
         super(Camelyon17IterableDataset).__init__()
+        self.target_transform = target_transform
         self.root = image_classes_root_path
         self.transform = transform
         self.validation_WSI_IDs = validation_WSI_IDs
@@ -48,6 +49,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                 self.Camelyon17Iterator(root=self.root,
                                         WSI_skip_list=self.validation_WSI_IDs,
                                         transform=self.transform,
+                                        target_transform = self.target_transform,
                                         negative_patches_ratio=self.negative_patches_ratio,
                                         is_validation=self.is_validation,
                                         )
@@ -61,7 +63,8 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
     class Camelyon17Iterator:
         ''' Iterator class '''
 
-        def __init__(self, root: str, WSI_skip_list, transform, negative_patches_ratio: float, is_validation):
+        def __init__(self, root: str, WSI_skip_list, transform,target_transform, negative_patches_ratio: float, is_validation):
+            self.target_transform = target_transform
             assert 0.1 <= negative_patches_ratio <= 0.9
             self.root = root
             self.negative_patches_ratio = negative_patches_ratio
@@ -177,5 +180,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
 
                 if self.transform is not None:
                     img = self.transform(img)
-
-                return img, class_to_idx(tag)
+                if self.target_transform is None:
+                    return img, class_to_idx(tag)
+                else:
+                    return img, self.target_transform(class_to_idx(tag))
