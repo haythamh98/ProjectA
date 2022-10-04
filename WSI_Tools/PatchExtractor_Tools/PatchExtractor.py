@@ -107,7 +107,10 @@ class PatchExtractor:
         img_gray[img_gray > BLACK_COLOR_THRESH_TO_IGNORE[self.wsi_Center_ID]] = 0
         blur = cv2.GaussianBlur(np.array(img_gray), IMG_CONTOUR_BLUR_KERNEL_SIZE[self.wsi_Center_ID], 0)
         # apply binary thresholding
-        ret, thresh = cv2.threshold(blur, CV2_THRESH_FOR_EDGES[self.wsi_Center_ID], 255, cv2.THRESH_OTSU)
+        if self.wsi_Center_ID != 2:
+          ret, thresh = cv2.threshold(blur, CV2_THRESH_FOR_EDGES[self.wsi_Center_ID], 255, cv2.THRESH_OTSU)
+        else:
+          ret, thresh = cv2.threshold(blur, CV2_THRESH_FOR_EDGES[self.wsi_Center_ID], 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C)
         # detect the contours on the binary image using cv2.CHAIN_APPROX_NONE
         contours, hierarchy = cv2.findContours(image=thresh, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_NONE)
         # draw contours on the original image
@@ -138,7 +141,7 @@ class PatchExtractor:
                 if axis[0] == 0 or axis[1] == 0 or axis[1] / axis[0] > DROP_WSI_SCANNER_NOISE_LINE_THRESH[
                     self.wsi_Center_ID] or axis[0] / \
                         axis[1] > DROP_WSI_SCANNER_NOISE_LINE_THRESH[self.wsi_Center_ID]:
-                    print("Dropping scanner noise")
+                    # print("Dropping scanner noise")
                     # TODO: some noise still pass, check better condition
                     continue
             except:
@@ -282,8 +285,9 @@ def iterate_camelyon17_files_extract_patches(draw_contours_only=False):
 
 from WSI_Tools.PatchExtractor_Tools.wsi_utils import form_wsi_path_by_ID
 from utils.Baseline_config import INTERESTING_WSI_IDS
+rose = [(4, 4), (9, 1), (10, 4), (12, 0), (15, 1), (15, 2), (16, 1), (17, 1), (17, 2), (17, 4), (20, 2), (20, 4), (21, 3), (22, 4), (24, 1), (24, 2), (34, 3), (36, 3), (38, 2), (39, 1), (40, 2), (41, 0), (42, 3), (44, 4), (45, 1), (46, 3), (46, 4), (48, 1), (51, 2), (52, 1), (60, 3), (61, 4), (62, 2), (64, 0), (66, 2), (67, 4), (68, 1), (72, 0), (73, 1), (75, 4), (80, 1), (81, 4), (86, 0), (86, 4), (87, 0), (88, 1), (89, 3), (92, 1), (96, 0), (99, 4)]
 def iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=False):
-    for file_idx in INTERESTING_WSI_IDS: # TODO: get list from rose
+    for file_idx in rose: # TODO: get list from rose
         filepath = form_wsi_path_by_ID(file_idx)
         if check_in_skip_list(os.path.split(filepath)[-1]):
             continue  # skip the file
