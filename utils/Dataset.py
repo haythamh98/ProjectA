@@ -36,7 +36,7 @@ def init_ds_final_solution(validation_WSI_IDs, use_dummy_ds=False, only_train_se
 
     camelyon17_validation_ds = Camelyon17IterableDataset(
         image_classes_root_path=DATASET_DIR if not use_dummy_ds else DUMMY_DATASET_DIR,
-        transform=None,  # in validation we dont use augmentation
+        transform=validation_ds_transforms,  # in validation we dont use augmentation
         target_transform=to_wo_metastasis,
         negative_patches_ratio=negative_patches_ratio_validation,
         validation_WSI_IDs=validation_WSI_IDs,

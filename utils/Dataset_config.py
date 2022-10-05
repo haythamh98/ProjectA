@@ -18,6 +18,11 @@ ds_transforms = transforms.Compose([  # TODO
     # transforms.Normalize(mean=(0.5,0.5,0.5), std=(0.5,0.5,0.5)) #
 ])
 
+validation_ds_transforms = transforms.Compose([  # TODO
+    transforms.ToTensor(),
+    # TODO: maybe use this?
+    # transforms.Normalize(mean=(0.5,0.5,0.5), std=(0.5,0.5,0.5)) #
+])
 # Properties
 LOADER_N_WORKERS = 1
 

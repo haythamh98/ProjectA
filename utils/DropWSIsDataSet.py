@@ -22,15 +22,12 @@ def class_to_idx(classname):
         raise "wtf"
 
 
-
-
-
 class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
     def __init__(self,
                  image_classes_root_path: str = PYTORCH_IMAGE_DATASET_PATH,
                  transform: Optional[Callable] = None,
-                 target_transform: Optional[Callable] = None, # might be needed for now
-                 negative_patches_ratio: float = 0.7,  # TODO: move to parameters
+                 target_transform: Optional[Callable] = None,  # might be needed for now
+                 negative_patches_ratio: float = 0,  # TODO: move to parameters
                  validation_WSI_IDs=Optional[Iterable],  ##### array of tuples (patient_ID, node_ID) for validation
                  is_validation=False
                  ):
@@ -51,7 +48,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                 self.Camelyon17Iterator(root=self.root,
                                         WSI_skip_list=self.validation_WSI_IDs,
                                         transform=self.transform,
-                                        target_transform = self.target_transform,
+                                        target_transform=self.target_transform,
                                         negative_patches_ratio=self.negative_patches_ratio,
                                         is_validation=self.is_validation,
                                         )
@@ -65,9 +62,10 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
     class Camelyon17Iterator:
         ''' Iterator class '''
 
-        def __init__(self, root: str, WSI_skip_list, transform,target_transform, negative_patches_ratio: float, is_validation):
+        def __init__(self, root: str, WSI_skip_list, transform, target_transform, negative_patches_ratio: float,
+                     is_validation):
             self.target_transform = target_transform
-            assert 0.1 <= negative_patches_ratio <= 0.9
+            # assert 0.1 <= negative_patches_ratio <= 0.9 TODO
             self.root = root
             self.negative_patches_ratio = negative_patches_ratio
             self.WSI_skip_list = WSI_skip_list
@@ -75,7 +73,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
             self.is_validation = is_validation
             negative_patches_ratio = int(negative_patches_ratio * 10)
             # one means extract Non negative patch,  zero : extract random negative patch
-            self.types_extract_list = ([0] * negative_patches_ratio + [1] * (10 - negative_patches_ratio))
+            self.types_extract_list = [1] * 10  # TODO  ([0] * negative_patches_ratio + [1] * (10 - negative_patches_ratio))
             random.shuffle(self.types_extract_list)
 
             assert os.path.isdir(os.path.join(root, 'NEGATIVE'))
@@ -122,47 +120,64 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
             ''''Returns the next value from team object's lists '''
 
             # print("before os.walk")
-            negative_dir_iterator = self.negative_dir_iterator
+            # negative_dir_iterator = self.negative_dir_iterator
             # print("after os.walk")
             img, tag = None, None
             while True:
                 self.types_extract_list_idx = self.types_extract_list_idx % len(self.types_extract_list)
-                # print(self.types_extract_list_idx)
+                print(self.types_extract_list_idx)
                 work_dir = ""
                 if self.types_extract_list[self.types_extract_list_idx] == 0:  # yield one negative patch
                     work_dir = self.negative_patches_dir
                     tag = 'NEGATIVE'
                 else:
+                    # print(self.other_tags_files_names)
                     tag_dir_name = random.choice(self.other_tags_files_names)
                     tag = tag_dir_name
+
                     work_dir = os.path.join(self.root, tag_dir_name)
+                    # print("work dir " + work_dir)
 
                 all_dir_patients = os.listdir(work_dir)
 
-                def condition(x): #  patient_9_node_0
+                # print("looking for tag = " + tag)
+                def condition(x):  # patient_9_node_0
                     x = x.split("_")
                     p_id = int(x[1])
-                    n_id = int(x[3])
+                    n_id = int(x[3][0])
                     if self.is_validation:
-                        if (p_id,n_id) in self.WSI_skip_list:
+                        if (p_id, n_id) in self.WSI_skip_list:
                             return True
                         return False
                     else:
-                        if (p_id,n_id) in self.WSI_skip_list:
+                        if (p_id, n_id) in self.WSI_skip_list:
                             return False
                         return True
 
+                # print("before filter " + str(all_dir_patients))
                 filtered_options = [x for x in all_dir_patients if condition(x)]
+                # print("after filter " + filtered_options)
+                # import time
+
                 choice_dir = random.choice(filtered_options)
-                pil_img_name = random.choice(os.listdir(os.path.join(all_dir_patients,choice_dir)))
-                # print(pil_img_name)
+
+                # print("choice dir name p " + str(choice_dir))
+                # time.sleep(1)
+                # print("dir lookign at " + os.path.join(work_dir,choice_dir)  )
+                # time.sleep(1)
+                # print("options " )
+                # print(str(os.listdir(os.path.join(work_dir,choice_dir))))
+                pil_img_name = random.choice(os.listdir(os.path.join(work_dir, choice_dir)))
+
+                print("selected name ", pil_img_name)
                 img_name = pil_img_name.split('_')
                 # print(img_name)
                 patient_ID = int(img_name[1])
                 # print("patient_ID",patient_ID)
                 node_ID = int(img_name[3][:-4])
                 # print("pil_img_name,",pil_img_name)
-                pil_img_path = os.path.join(os.path.join(all_dir_patients, choice_dir, pil_img_name))
+                # print("seach path = " + os.path.join(all_dir_patients, choice_dir, pil_img_name))
+                pil_img_path = os.path.join(os.path.join(work_dir, choice_dir, pil_img_name))
                 try:
                     img = Image.open(pil_img_path).convert("RGB")
                     if not (img.size[0] > 0 and img.size[1] > 0):

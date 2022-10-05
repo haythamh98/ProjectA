@@ -36,8 +36,8 @@ if __name__ == '__main__':
 
     #from WSI_Tools.PatchExtractor_Tools.PatchExtractor import *
     #iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=False)
-    #from utils.Folder_spliter import split_folder_to_subfolders
-    #split_folder_to_subfolders(MACRO_OUTPUT_DIR)
+    #from utils.Folder_spliter import split_folder_to_subfolders_by_order
+    #split_folder_to_subfolders_by_order(MACRO_OUTPUT_DIR)
     #split_folder_to_subfolders(NEGATIVE_OUTPUT_DIR)
 
     import Final_solution

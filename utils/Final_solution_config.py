@@ -18,7 +18,7 @@ adam_amsgrad = False
 
 
 model_input_batch_size = BATCH_SIZE
-n_batches_train = 8
-n_batches_validation = 2
+n_batches_train = 2
+n_batches_validation = 1
 
 loss_fn = torch.nn.BCELoss()
