@@ -23,6 +23,8 @@ def class_to_idx(classname):
 
 
 
+
+
 class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
     def __init__(self,
                  image_classes_root_path: str = PYTORCH_IMAGE_DATASET_PATH,
@@ -91,7 +93,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                 self.other_tags_files_names.remove(tag_to_remove)
 
             self.types_extract_list_idx = 0
-            print(f"supported tags other than negative are {self.other_tags_files_names}")
+            # print(f"supported tags other than negative are {self.other_tags_files_names}")
 
             self.negative_dir_iterator = iter(os.scandir(self.negative_patches_dir))
 
@@ -126,58 +128,50 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
             while True:
                 self.types_extract_list_idx = self.types_extract_list_idx % len(self.types_extract_list)
                 # print(self.types_extract_list_idx)
+                work_dir = ""
                 if self.types_extract_list[self.types_extract_list_idx] == 0:  # yield one negative patch
-                    # old: pil_img_name = next(negative_dir_iterator).name  # TODO: ask david... we cant randomize this
-                    # new
-                    negative_sub_dir = random.choice(os.listdir(self.negative_patches_dir))
-                    negative_sub_dir_path = os.path.join(self.negative_patches_dir, negative_sub_dir)
-                    pil_img_name = random.choice(os.listdir(negative_sub_dir_path))
-                    # print(pil_img_name)
-                    img_name = pil_img_name.split('_')
-                    # print(img_name)
-                    patient_ID = int(img_name[1])
-                    # print("patient_ID",patient_ID)
-                    node_ID = int(img_name[3][:-4])
-                    # print("pil_img_name,",pil_img_name)
-                    pil_img_path = os.path.join(os.path.join(negative_sub_dir_path, pil_img_name))
-                    # print("pil_img_path",pil_img_path)
-                    if not self.can_be_used(patient_ID, node_ID):
-                        continue
-                    try:
-                        img = Image.open(pil_img_path).convert("RGB")
-                        if not (img.size[0] > 0 and img.size[1] > 0):
-                            # bad image
-                            continue
-                    except:
-                        # print(f"image {pil_img_path} is corrupted")
-                        continue
-
+                    work_dir = self.negative_patches_dir
                     tag = 'NEGATIVE'
                 else:
                     tag_dir_name = random.choice(self.other_tags_files_names)
-                    pil_img_name = random.choice(os.listdir(os.path.join(self.root, tag_dir_name)))
-                    pil_img_path = os.path.join(os.path.join(self.root, tag_dir_name, pil_img_name))
-                    img_name = pil_img_name.split('_')
-                    # print(img_name)
-                    patient_ID = int(img_name[1])
-                    # print("patient_ID",patient_ID)
-                    node_ID = int(img_name[3][:-4])
-                    # print("pil_img_name,",pil_img_name)
-                    # print("pil_img_path",pil_img_path)
-                    if not self.can_be_used(patient_ID, node_ID):
-                        continue
-                    try:
-                        img = Image.open(pil_img_path).convert("RGB")
-                        if not (img.size[0] > 0 and img.size[1] > 0):
-                            # bad image
-                            continue
-                    except:
-                        # print(f"image {pil_img_path} is corrupted")
-                        continue
                     tag = tag_dir_name
+                    work_dir = os.path.join(self.root, tag_dir_name)
 
+                all_dir_patients = os.listdir(work_dir)
+
+                def condition(x): #  patient_9_node_0
+                    x = x.split("_")
+                    p_id = int(x[1])
+                    n_id = int(x[3])
+                    if self.is_validation:
+                        if (p_id,n_id) in self.WSI_skip_list:
+                            return True
+                        return False
+                    else:
+                        if (p_id,n_id) in self.WSI_skip_list:
+                            return False
+                        return True
+
+                filtered_options = [x for x in all_dir_patients if condition(x)]
+                choice_dir = random.choice(filtered_options)
+                pil_img_name = random.choice(os.listdir(os.path.join(all_dir_patients,choice_dir)))
+                # print(pil_img_name)
+                img_name = pil_img_name.split('_')
+                # print(img_name)
+                patient_ID = int(img_name[1])
+                # print("patient_ID",patient_ID)
+                node_ID = int(img_name[3][:-4])
+                # print("pil_img_name,",pil_img_name)
+                pil_img_path = os.path.join(os.path.join(all_dir_patients, choice_dir, pil_img_name))
+                try:
+                    img = Image.open(pil_img_path).convert("RGB")
+                    if not (img.size[0] > 0 and img.size[1] > 0):
+                        # bad image
+                        continue
+                except:
+                    # print(f"image {pil_img_path} is corrupted")
+                    continue
                 self.types_extract_list_idx += 1
-
                 if self.transform is not None:
                     img = self.transform(img)
                 if self.target_transform is None:

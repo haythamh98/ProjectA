@@ -40,7 +40,7 @@ def run_final_train_model():
         init_final_model()
     camelyon17_train_ds, camelyon17_train_dl, camelyon17_validation_ds, camelyon17_validation_dl = Dataset.init_ds_final_solution(
         validation_WSI_IDs=get_random_validation_idx(),
-        use_dummy_ds=True,
+        use_dummy_ds=False,
         only_train_set=False,
         negative_patches_ratio_train=0.7,
         negative_patches_ratio_validation=0.7,
@@ -97,7 +97,7 @@ def run_final_train_model():
         # validation doesnt requires gradient
         with torch.no_grad():
             cum_loss = 0
-            for i , data_ in zip(range(n_batches_validation),camelyon17_train_dl):  # TODO
+            for i , data_ in zip(range(n_batches_validation),camelyon17_validation_dl):  # TODO
                 print(f"validating batch num {i+1} out of {n_batches_validation} ")
                 x_batch, y_batch = data_
                 x_batch = x_batch.to(device)
