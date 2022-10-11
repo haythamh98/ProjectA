@@ -27,7 +27,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                  image_classes_root_path: str = PYTORCH_IMAGE_DATASET_PATH,
                  transform: Optional[Callable] = None,
                  target_transform: Optional[Callable] = None,  # might be needed for now
-                 negative_patches_ratio: float = 0,  # TODO: move to parameters
+                 negative_patches_ratio: float = 0.7,  # TODO: move to parameters
                  validation_WSI_IDs=Optional[Iterable],  ##### array of tuples (patient_ID, node_ID) for validation
                  is_validation=False
                  ):
@@ -65,7 +65,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
         def __init__(self, root: str, WSI_skip_list, transform, target_transform, negative_patches_ratio: float,
                      is_validation):
             self.target_transform = target_transform
-            # assert 0.1 <= negative_patches_ratio <= 0.9 TODO
+            assert 0.1 <= negative_patches_ratio <= 0.9
             self.root = root
             self.negative_patches_ratio = negative_patches_ratio
             self.WSI_skip_list = WSI_skip_list
@@ -73,7 +73,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
             self.is_validation = is_validation
             negative_patches_ratio = int(negative_patches_ratio * 10)
             # one means extract Non negative patch,  zero : extract random negative patch
-            self.types_extract_list = [1] * 10  # TODO  ([0] * negative_patches_ratio + [1] * (10 - negative_patches_ratio))
+            self.types_extract_list =  ([0] * negative_patches_ratio + [1] * (10 - negative_patches_ratio))
             random.shuffle(self.types_extract_list)
 
             assert os.path.isdir(os.path.join(root, 'NEGATIVE'))
@@ -125,7 +125,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
             img, tag = None, None
             while True:
                 self.types_extract_list_idx = self.types_extract_list_idx % len(self.types_extract_list)
-                print(self.types_extract_list_idx)
+                #print(self.types_extract_list_idx)
                 work_dir = ""
                 if self.types_extract_list[self.types_extract_list_idx] == 0:  # yield one negative patch
                     work_dir = self.negative_patches_dir
@@ -169,7 +169,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                 # print(str(os.listdir(os.path.join(work_dir,choice_dir))))
                 pil_img_name = random.choice(os.listdir(os.path.join(work_dir, choice_dir)))
 
-                print("selected name ", pil_img_name)
+                #print("selected name ", pil_img_name)
                 img_name = pil_img_name.split('_')
                 # print(img_name)
                 patient_ID = int(img_name[1])
