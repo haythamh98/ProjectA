@@ -175,7 +175,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                 patient_ID = int(img_name[1])
                 # print("patient_ID",patient_ID)
                 node_ID = int(img_name[3][:-4])
-                # print("pil_img_name,",pil_img_name)
+                # print(f"{patient_ID},{node_ID}, {self.is_validation}")
                 # print("seach path = " + os.path.join(all_dir_patients, choice_dir, pil_img_name))
                 pil_img_path = os.path.join(os.path.join(work_dir, choice_dir, pil_img_name))
                 try:

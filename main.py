@@ -33,12 +33,13 @@ def big_file_Walkaround():
 
 if __name__ == '__main__':
     print("Hi")
-
-    #from WSI_Tools.PatchExtractor_Tools.PatchExtractor import *
-    #iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=False)
-    #from utils.Folder_spliter import split_folder_to_subfolders_by_order
-    #split_folder_to_subfolders_by_order(MACRO_OUTPUT_DIR)
-    #split_folder_to_subfolders(NEGATIVE_OUTPUT_DIR)
+    """
+    from WSI_Tools.PatchExtractor_Tools.PatchExtractor import *
+    iterate_camelyon17_interesting_files_extract_patches(draw_contours_only=False)
+    from utils.Folder_spliter import split_folder_to_subfolders_by_order
+    split_folder_to_subfolders_by_order(MACRO_OUTPUT_DIR)
+    split_folder_to_subfolders_by_order(NEGATIVE_OUTPUT_DIR)
+    """
 
     import Final_solution
     Final_solution.run_final_train_model()
