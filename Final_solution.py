@@ -16,6 +16,8 @@ from utils.Evaluation_metrics import *
 from utils.Heatmap import heatmap
 from utils.summaries import TensorboardSummary
 import logging
+from torchsummary import summary
+
 
 model = None
 optimizer = None
@@ -24,24 +26,24 @@ optimizer = None
 def init_final_model():
     global model, optimizer
     model = models.resnet18(pretrained=True)
+    #print("len(model.parameters())",sum(1 for x in model.parameters()))
     model.eval()
-    # print(list(model.children())[:])
-    # model = torch.nn.Sequential(*(list(model.children())[:-1]))  # strips off last linear layer
-    for params in model.parameters():
-        params.requires_grad_ = False
-    # add a new final layer
-    nr_filters = model.fc.in_features  # number of input features of last layer
-    model.fc = nn.Linear(nr_filters, out_features=1)
-    # print("RESTENT18!*" , list(model.children())[:])
+    #model = nn.Sequential(*(list(model.children())[:-2]))  # strips off last linear layer
+    nr_features_out = model.fc.in_features  # number of input features of last layer
+    model.fc = nn.Sequential(nn.Linear(nr_features_out, out_features=1),nn.Sigmoid())
+    #print("len(model.parameters())",sum(1 for x in model.parameters()))
     model = model.to(device)
+    summary(model, (3, 256, 256))
+    print(f"Learn rate {adam_lr} \nbetas {adam_betas} \nweight_decay {adam_weight_decay} \namsgrad {adam_amsgrad}")
+    #print("len(model.parameters())",sum(1 for x in model.parameters()))
     optimizer = Adam(model.parameters(), lr=adam_lr, betas=adam_betas, eps=adam_eps, weight_decay=adam_weight_decay,
                      amsgrad=adam_amsgrad)
 
 
 def get_random_validation_idx():
-    from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import interesting_wsis
-    size_ = len(interesting_wsis)
-    return random.choices(interesting_wsis, weights=None, cum_weights=None, k=int(0.25 * size_) + 1)
+    from WSI_Tools.PatchExtractor_Tools.PatchExtractor_config import annotated_wsi,extra_negative_slides
+    return random.choices(annotated_wsi, weights=None, cum_weights=None, k=int(0.25 * len(annotated_wsi)) + 1) + \
+        random.choices(extra_negative_slides, weights=None, cum_weights=None, k=int(0.35 * len(extra_negative_slides)) + 1)
 
 
 def import_model(path: str = ""):  # TODO: rose set default
@@ -55,9 +57,12 @@ def test_wsi(path: str = None, wsi_tuple: tuple = None, patch_size=None, patches
 
     if wsi_tuple is not None:
         path = form_wsi_path_by_ID(wsi_tuple)
+    if patch_size is None:
+        patch_size = DEFAULT_PATCH_SIZE
+
     extr = PatchExtractor(
         wsi_path=path,
-        patch_size=DEFAULT_PATCH_SIZE if patch_size is None else patch_size,
+        patch_size=patch_size,
         patch_overlap=(0, 0) if patches_overlap is None else patches_overlap,
         negative_output_dir=TEMP_EXTRACTION_PATH_FOR_TEST_WSI,
         macro_output_dir=TEMP_EXTRACTION_PATH_FOR_TEST_WSI,
@@ -70,11 +75,11 @@ def test_wsi(path: str = None, wsi_tuple: tuple = None, patch_size=None, patches
     extr.start_extract()
     print("done extract")
     # build heatmap, resnet forward + knn predict
-    heatmap_tensor = torch.zeros((3, (extr.wsi.dimensions[0] // 512) + 1, (extr.wsi.dimensions[1] // 512) + 1))
-    pred_heatmap_tensor = torch.zeros(((extr.wsi.dimensions[0] // 512) + 1, (extr.wsi.dimensions[1] // 512) + 1))
+    heatmap_tensor = torch.zeros((3, (extr.wsi.dimensions[0] // patch_size[0]) + 1, (extr.wsi.dimensions[1] // patch_size[1]) + 1))
+    pred_heatmap_tensor = torch.zeros(((extr.wsi.dimensions[0] // patch_size[0]) + 1, (extr.wsi.dimensions[1] // patch_size[1]) + 1))
     one_wsi_patches_names = os.listdir(TEMP_EXTRACTION_PATH_FOR_TEST_WSI)
     to_tensor_transform = transforms.ToTensor()
-    sf_layer = nn.Sigmoid()
+
 
     for x in range(0, len(one_wsi_patches_names), BATCH_SIZE):
         print(f"in batch num {x // BATCH_SIZE} out of {len(one_wsi_patches_names) // BATCH_SIZE} ")
@@ -87,7 +92,7 @@ def test_wsi(path: str = None, wsi_tuple: tuple = None, patch_size=None, patches
 
         x_batch = tmp_tensor
 
-        yhat = sf_layer(model(x_batch))
+        yhat = model(x_batch)
         y_temp = torch.clone(yhat)
         y_temp[y_temp >= 0.5] = 1  # is tumor
         y_temp[y_temp < 0.5] = 0  # is negative
@@ -95,8 +100,8 @@ def test_wsi(path: str = None, wsi_tuple: tuple = None, patch_size=None, patches
         for y in range(0, min(BATCH_SIZE, len(one_wsi_patches_names) - x - 1)):
             # patient_000_node_0.tif_xy_95924_90156_512x512.png
             img_name = one_wsi_patches_names[x + y].split('_')
-            i = int(img_name[5]) // 512
-            j = int(img_name[6]) // 512
+            i = int(img_name[5]) // patch_size[0]
+            j = int(img_name[6]) // patch_size[1]
             predi = int(y_temp[y])
             pred_heatmap_tensor[i][j] = int(y_temp[y])
             if predi != 0:
@@ -124,8 +129,8 @@ def test_wsi(path: str = None, wsi_tuple: tuple = None, patch_size=None, patches
     for i in range(pred_heatmap_tensor.shape[0]):
         for j in range(pred_heatmap_tensor.shape[1]):
             patch_poly = Polygon(
-                [Point(i * 512, j * 512), Point(i * 512 + 512, j * 512), Point(i * 512 + 512, j * 512 + 512),
-                 Point(i * 512, j * 512 + 512)])
+                [Point(i * patch_size[0], j * patch_size[1]), Point(i * patch_size[0] + patch_size[0], j * patch_size[1]), Point(i * patch_size[0] + patch_size[0]
+                    , j * patch_size[1] + patch_size[1]),Point(i * patch_size[0], j * patch_size[1] + patch_size[1])])
 
             patch_tag = extr.classify_metastasis_polygon(patch_poly)
             if patch_tag == PatchTag.NEGATIVE:
@@ -169,18 +174,16 @@ def run_final_train_model():
     if model is None:
         init_final_model()
     validation_set = get_random_validation_idx()
-    print("Validation set:")
-    print(validation_set)
+    print("Validation set:",validation_set)
+    
     camelyon17_train_ds, camelyon17_train_dl, camelyon17_validation_ds, camelyon17_validation_dl = Dataset.init_ds_final_solution(
         validation_WSI_IDs=validation_set,
         use_dummy_ds=False,
         only_train_set=False,
-        negative_patches_ratio_train=0.7,
-        negative_patches_ratio_validation=0.7,
+        negative_patches_ratio_train=0.5,
+        negative_patches_ratio_validation=0.5,
     )
 
-    # TODO temp
-    sf_layer = nn.Sigmoid()
     # evaluator = Evaluator
     best_model_wts = None
     losses = []
@@ -201,20 +204,19 @@ def run_final_train_model():
     logger1.setLevel(logging.WARNING)
     formatter1 = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
     timestr = time.strftime("%Y%m%d-%H%M")
-    filehandler1 = logging.FileHandler(f"/home/hawahaitam/results/metrics_log_{timestr}.txt")
+    # filehandler1 = logging.FileHandler(f"/home/hawahaitam/results/metrics_log_{timestr}.txt") FUCKING TODO
+    filehandler1 = logging.FileHandler(f"/home/hawahaitam/results/metrics_log.txt")
     filehandler1.setFormatter(formatter1)
     logger1.addHandler(filehandler1)
 
     def train_step(x, y):
+        optimizer.zero_grad()
         # make prediction
         yhat = model(x)
-        yhat = sf_layer(yhat)
         # compute loss
         loss = loss_fn(yhat, y)
         loss.backward()
         optimizer.step()
-        optimizer.zero_grad()
-        # optimizer.cleargrads()
         return loss
 
     for epoch in range(n_epochs):
@@ -261,7 +263,7 @@ def run_final_train_model():
                 y_batch = y_batch.unsqueeze(1).float()  # convert target to same nn output shape
                 y_batch = y_batch.to(device)
 
-                yhat = sf_layer(model(x_batch))
+                yhat = model(x_batch).detach()
                 roc_curve += AUC_of_the_ROC(yhat.cpu(), y_batch.cpu())
 
                 y_temp = torch.clone(yhat)
@@ -283,16 +285,13 @@ def run_final_train_model():
                 val_loss = loss_fn(yhat, y_batch)
                 cum_loss += val_loss / (n_batches_validation * model_input_batch_size)
                 val_losses.append(val_loss.item())
-            # total_tn = curr_batch_n_correct_negative_classification
+                
             total_tn = curr_n_correct_negative_classification
-            # total_tp = curr_batch_n_correct_metastasis_classification
             total_tp = curr_n_correct_metastasis_classification
 
             total_fn = curr_n_negative_samples - total_tn
             total_fp = curr_n_metastasis_samples - total_tp
-            # acc = evaluator.accuracy(total_tp, total_tn, total_fp, total_fn)
-            #
-            # prec = evaltutor.precision(total_tp, total_fp)
+
             acc = accuracy(total_tp, total_tn, total_fp, total_fn)
             balanced_acc = balanced_accuracy(total_tp, total_tn, total_fp, total_fn)
             prec = precision(total_tp, total_fp)
@@ -303,10 +302,8 @@ def run_final_train_model():
                     curr_n_metastasis_samples - curr_n_correct_metastasis_classification)
             negative_accuracy_by_epoch.append(curr_n_correct_negative_classification / curr_n_negative_samples)
             tumor_accuracy_by_epoch.append(curr_n_correct_metastasis_classification / curr_n_metastasis_samples)
-            # writer.add_scalar('Precision', prec, epoch)
-            # writer.add_scalar('Acc', acc, epoch)
 
-            logger1.info(
+            logger1.warning(
                 'Epoch: %s , Acc: %s , Precision:%s , Recall: %s , F1_score: %s , Balanced_accuracy: %s , Area_under_curve_ROC: %s }',
                 epoch, acc, prec, rec, f1, balanced_acc, roc_curve)
 

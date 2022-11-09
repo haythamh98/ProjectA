@@ -169,7 +169,7 @@ class Camelyon17IterableDataset(torch.utils.data.IterableDataset):
                 # print(str(os.listdir(os.path.join(work_dir,choice_dir))))
                 pil_img_name = random.choice(os.listdir(os.path.join(work_dir, choice_dir)))
 
-                #print("selected name ", pil_img_name)
+                # print("selected name ", pil_img_name)
                 img_name = pil_img_name.split('_')
                 # print(img_name)
                 patient_ID = int(img_name[1])
